@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Noto_Serif_TC, Noto_Sans_TC } from "next/font/google
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { FocusModeProvider } from "@/components/FocusModeProvider";
 import { HomeLayoutProvider } from "@/components/HomeLayoutProvider";
 
@@ -31,6 +32,17 @@ const notoSans = Noto_Sans_TC({
 export const metadata: Metadata = {
   title: "はるまとぺーじ 檔案庫",
   description: "福嶋晴菜の「はるまとぺーじ」非公式節目內容檔案庫",
+  // 個人存檔用途，不希望被搜尋引擎收錄
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export default function RootLayout({
@@ -115,6 +127,7 @@ export default function RootLayout({
               <main className="min-h-screen">
                 {children}
               </main>
+              <Footer />
             </FocusModeProvider>
           </HomeLayoutProvider>
         </ThemeProvider>

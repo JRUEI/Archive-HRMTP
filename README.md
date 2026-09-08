@@ -1,4 +1,4 @@
-# [はるまとぺーじ 檔案庫 (Harumatope Archive)](<https://jruei.github.io/harumatope-archive/>)
+# [はるまとぺーじ 檔案庫 (Harumatope Archive)](<https://jruei.github.io/Archive-HRMTP/>)
 
 **福嶋晴菜の『はるまとぺーじ』非公式節目內容檔案庫**
 

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>頁首改版對照 — 現況 vs PR #1</title>
+<style>
+  :root{
+    --ground:#09090b;
+    --panel:#101013;
+    --panel-2:#18181b;
+    --hair:#26262b;
+    --hair-soft:#1e1e22;
+    --text:#fafafa;
+    --muted:#a1a1aa;
+    --dim:#71717a;
+    --purple:#c084fc;
+    --green:#34d399;
+    --gold:#e8c97a;
+    --cjk:-apple-system,BlinkMacSystemFont,"PingFang TC","Helvetica Neue","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Cascadia Code",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:dark}
+  body{
+    margin:0;background:var(--ground);color:var(--text);
+    font-family:var(--cjk);font-size:15px;line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:56px 24px 96px}
+
+  /* ---------- 文件標頭 ---------- */
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:0 0 14px}
+  h1{font-size:clamp(28px,4.4vw,42px);font-weight:900;letter-spacing:-.03em;line-height:1.25;margin:0 0 16px;text-wrap:balance}
+  h1 .accent{background:linear-gradient(to right,var(--purple),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--muted);max-width:62ch;margin:0;font-size:16px}
+  .meta{
+    font-family:var(--mono);font-size:12px;color:var(--dim);
+    margin-top:22px;padding-top:18px;border-top:1px solid var(--hair);
+    display:flex;flex-wrap:wrap;gap:8px 26px;
+  }
+  .meta b{color:var(--muted);font-weight:500}
+
+  /* ---------- 控制列 ---------- */
+  .controls{
+    position:sticky;top:0;z-index:60;margin:32px 0 0;padding:14px 18px;
+    background:rgba(16,16,19,.92);backdrop-filter:blur(16px);
+    border:1px solid var(--hair);border-radius:14px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;
+  }
+  .controls label{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.05em}
+  input[type=range]{flex:1;min-width:160px;accent-color:var(--purple)}
+  .readout{font-family:var(--mono);font-size:13px;min-width:112px;font-variant-numeric:tabular-nums}
+  .readout .bp{color:var(--green)}
+  .presets{display:flex;gap:6px}
+  .presets button{
+    font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+    background:var(--panel-2);color:var(--muted);border:1px solid var(--hair);
+    border-radius:999px;padding:5px 12px;cursor:pointer;transition:.15s;
+  }
+  .presets button:hover{color:var(--text);border-color:var(--dim)}
+  .presets button.on{background:var(--purple);color:#1a0b2e;border-color:var(--purple);font-weight:700}
+  .toggle{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer}
+  .toggle input{accent-color:var(--green)}
+
+  /* ---------- 樣本 ---------- */
+  .specimen{margin:40px 0 0}
+  .spec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .tag{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 10px;border-radius:999px;text-transform:uppercase}
+  .tag.now{background:rgba(161,161,170,.16);color:var(--muted)}
+  .tag.next{background:linear-gradient(to right,var(--purple),var(--green));color:#0b0b0d}
+  .spec-head h2{font-size:19px;font-weight:800;margin:0;letter-spacing:-.01em}
+  .spec-head .src{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+
+  .stage{border:1px solid var(--hair);border-radius:16px;overflow:hidden;background:var(--ground)}
+  .stage-bar{
+    display:flex;align-items:center;gap:8px;padding:9px 14px;
+    background:var(--panel);border-bottom:1px solid var(--hair-soft);
+    font-family:var(--mono);font-size:11px;color:var(--dim);
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#2f2f36}
+  .stage-bar .url{margin-left:8px}
+  .fit{position:relative;overflow:hidden;background:var(--ground)}
+  .viewport{transform-origin:top left;background:var(--ground);container-type:inline-size}
+
+  /* ===== 頁首 1:1 複製 ===== */
+  .nav{border-bottom:1px solid var(--hair);background:rgba(9,9,11,.8)}
+  .navouter{max-width:1152px;margin:0 auto}
+  .navrow{margin:0 auto;display:flex;align-items:center;justify-content:space-between;position:relative}
+  .icons{display:flex;align-items:center;flex-shrink:0}
+  .btn{
+    width:40px;height:40px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:999px;border:0;cursor:pointer;background:var(--panel-2);color:var(--muted);
+    box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);
+    transition:transform .15s,background .15s,color .15s;
+  }
+  .btn:hover{transform:translateY(-2px)}
+  .btn.yt{background:rgba(239,68,68,.3);color:#fca5a5}
+  .btn svg{display:block}
+  .tagline{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.05em;
+    white-space:nowrap;pointer-events:none;display:none;
+  }
+
+  /* 現況：藥丸 */
+  .v-now .navouter{padding:0 16px}
+  .v-now .navrow{height:64px}
+  .v-now .icons{gap:8px}
+  .pill{
+    height:40px;display:flex;align-items:center;justify-content:center;padding:0 16px;
+    border-radius:999px;background:rgba(192,132,252,.3);color:#d8b4fe;
+    font-size:16px;font-weight:900;letter-spacing:.1em;text-decoration:none;
+    max-width:50%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);transition:.15s;
+  }
+  .pill:hover{transform:translateY(-2px);background:rgba(192,132,252,.4)}
+  .btn-wide{
+    height:40px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;
+    border-radius:999px;background:rgba(239,68,68,.3);color:#fca5a5;
+    font-size:14px;font-weight:700;letter-spacing:.025em;text-decoration:none;white-space:nowrap;
+    box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);transition:transform .15s;
+  }
+  .btn-wide:hover{transform:translateY(-2px)}
+  .btn-wide .lbl{display:none}
+  @container (min-width:640px){
+    .v-now .tagline{display:block}
+    .v-now .btn-wide .lbl{display:inline}
+  }
+  @container (min-width:768px){
+    .v-now .navouter{padding:0 24px}
+    .v-now .icons{gap:16px}
+    .v-now .pill{font-size:20px;padding:0 20px}
+    .v-now .btn-wide{padding:0 20px}
+    .v-now .tagline{font-size:14px}
+  }
+
+  /* 新版：站名（外層比照內文外框，內層收到 896px 對齊列表） */
+  .v-next .navouter{padding:0 24px}
+  .v-next .navrow{max-width:896px;height:56px;gap:12px}
+  .v-next .icons{gap:6px}
+  .v-next .btn{width:36px;height:36px}
+  .wordmark{flex-shrink:0;text-decoration:none;white-space:nowrap;font-size:18px;font-weight:900;letter-spacing:-.025em;transition:opacity .15s}
+  .wordmark:hover{opacity:.8}
+  .wordmark .jp{color:#fff;display:none}
+  .grad{background:linear-gradient(to right,var(--purple),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+  @container (min-width:640px){ .v-next .wordmark .jp{display:inline} }
+  @container (min-width:768px){
+    .v-next .navrow{height:64px}
+    .v-next .icons{gap:8px}
+    .v-next .btn{width:40px;height:40px}
+    .v-next .wordmark{font-size:24px;letter-spacing:-.6px}
+    .v-next .tagline{display:block}
+  }
+
+  /* ===== 頁面內容縮影（結構比照實際 DOM） ===== */
+  .page{max-width:1152px;margin:0 auto;padding:26px 24px 34px}
+  .hero{text-align:center;font-weight:900;letter-spacing:-.04em;line-height:1.28;font-size:clamp(22px,4.2cqi,50px)}
+  .hero .grad{display:block}
+  .listwrap{margin:26px auto 0}
+  .v-now .listwrap{max-width:896px}
+  .v-next .listwrap{max-width:896px}
+  .row{display:flex;align-items:flex-start;gap:16px}
+  .datecol{
+    width:112px;flex-shrink:0;text-align:right;padding-right:12px;padding-top:22px;
+    font-family:var(--mono);font-size:12px;color:var(--purple);display:none;
+  }
+  @container (min-width:640px){ .datecol{display:block} }
+  .nodecol{width:32px;flex-shrink:0;margin-right:16px;position:relative;align-self:stretch;display:none}
+  @container (min-width:640px){ .nodecol{display:block} }
+  .nodecol i{position:absolute;left:50%;top:32px;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px var(--ground)}
+  .nodecol u{position:absolute;left:50%;transform:translateX(-50%);top:32px;bottom:-12px;width:3px;background:linear-gradient(to bottom,var(--green),var(--hair))}
+  .card{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--hair);border-radius:16px;padding:24px 32px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{font-size:12px;font-weight:700;letter-spacing:.04em;padding:4px 14px;border-radius:999px}
+  .chip.ep{background:var(--green);color:#052e20}
+  .chip.guest{background:rgba(245,158,11,.2);color:#fcd34d}
+  .card h3{margin:0 0 10px;font-size:18px;font-weight:700;line-height:1.5}
+  .card p{margin:0;color:var(--muted);font-size:14px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* ===== 參考線（未縮放層） ===== */
+  .rulers{position:absolute;inset:0;pointer-events:none;z-index:40}
+  .rulers.off{display:none}
+  .rulers .v{position:absolute;top:0;bottom:0;width:0}
+  .rulers .v.head{border-left:1px dashed rgba(192,132,252,.8)}
+  .rulers .v.card{border-left:1px dashed rgba(52,211,153,.9)}
+  .rulers .lab{
+    position:absolute;font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+    background:rgba(9,9,11,.88);padding:2px 6px;border-radius:4px;white-space:nowrap;
+  }
+  .rulers .lab.p{color:var(--purple)}
+  .rulers .lab.g{color:var(--green)}
+
+  .verdict{margin:14px 0 0;padding:13px 16px;border-radius:12px;font-size:14px;display:flex;gap:10px;align-items:flex-start;border:1px solid;line-height:1.7}
+  .verdict.bad{background:rgba(239,68,68,.07);border-color:rgba(252,165,165,.28);color:#fca5a5}
+  .verdict.good{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.28);color:var(--green)}
+  .verdict b{font-family:var(--mono);font-weight:700}
+  .verdict span{color:var(--muted)}
+
+  h2.sec{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:64px 0 6px;padding-top:26px;border-top:1px solid var(--hair)}
+  .sec-note{color:var(--dim);font-size:13.5px;margin:0 0 22px}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:11px 16px;text-align:left;border-bottom:1px solid var(--hair-soft);white-space:nowrap}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600;background:var(--panel)}
+  tbody tr:last-child td{border-bottom:0}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  td.miss{color:#fca5a5}
+  td.hit{color:var(--green)}
+
+  ul.changes{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:14px}
+  ul.changes li{background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:16px 18px}
+  ul.changes h4{margin:0 0 5px;font-size:15px;font-weight:700}
+  ul.changes p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.75}
+  ul.changes .kind{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
+  ul.changes li.warn{border-color:rgba(232,201,122,.3)}
+  ul.changes li.warn .kind{color:var(--gold)}
+
+  code{font-family:var(--mono);font-size:.88em;background:var(--panel-2);padding:1.5px 6px;border-radius:5px;color:var(--purple)}
+  footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:11.5px;color:var(--dim);line-height:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">demo · header · 2026-09-06</p>
+  <h1>頁首改版對照<br><span class="accent">現況 vs PR #1</span></h1>
+  <p class="lede">
+    拖動滑桿改變模擬視窗寬度，兩組頁首會同步反應斷點。尺寸、顏色、間距皆為 1:1 複製，
+    數值取自兩個站台的實際量測，不是示意圖。
+  </p>
+  <div class="meta">
+    <span><b>現況</b> jruei.github.io（<code>main</code>，已部署）</span>
+    <span><b>新版</b> localhost:3000（<code>feat/compact-header-wordmark</code>）</span>
+    <span><b>量測視窗</b> 1265px</span>
+  </div>
+
+  <div class="controls">
+    <label for="w">模擬寬度</label>
+    <input type="range" id="w" min="320" max="1280" step="1" value="1280">
+    <span class="readout"><span id="wv">1280</span>px · <span class="bp" id="bp">xl</span></span>
+    <span class="presets">
+      <button data-w="375">375</button>
+      <button data-w="640">640</button>
+      <button data-w="768">768</button>
+      <button data-w="1280" class="on">1280</button>
+    </span>
+    <label class="toggle"><input type="checkbox" id="g" checked> 對齊參考線</label>
+  </div>
+
+  <!-- ============ 現況 ============ -->
+  <section class="specimen">
+    <div class="spec-head">
+      <span class="tag now">現況</span>
+      <h2>紫色藥丸按鈕</h2>
+      <span class="src">你截圖上看到的、線上正在跑的版本</span>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">jruei.github.io/harumatope-archive/</span>
+      </div>
+      <div class="fit" id="fitNow">
+        <div class="viewport v-now" id="vpNow">
+          <nav class="nav">
+            <div class="navouter"><div class="navrow">
+              <a class="pill" href="#">はるまとぺーじ</a>
+              <span class="tagline">非公式節目內容檔案庫・全 10 回收錄</span>
+              <div class="icons">
+                <a class="btn-wide" href="#">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                  <span class="lbl">影片清單</span>
+                </a>
+                <a class="btn" href="#" aria-label="X"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+                <button class="btn" aria-label="設定"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              </div>
+            </div></div>
+          </nav>
+          <div class="page">
+            <div class="hero">福嶋晴菜の<span class="grad">「はるまとぺーじ」</span></div>
+            <div class="listwrap">
+              <div class="row">
+                <div class="datecol">2026-08-22</div>
+                <div class="nodecol"><u></u><i></i></div>
+                <div class="card">
+                  <div class="chips"><span class="chip ep">第 10 回</span><span class="chip guest">來賓：佐藤榛夏</span></div>
+                  <h3>嘉賓佐藤榛夏登場！回顧深厚友誼與生日驚喜</h3>
+                  <p>迎來了同為聲優的好友「佐藤榛夏」作為嘉賓，福嶋晴菜送上了充滿夏日風情的「彩虹素麵」與企鵝圖案的杯墊作為生日驚喜禮物。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rulers" id="rulNow"></div>
+      </div>
+    </div>
+
+    <div class="verdict bad">
+      <span>✕</span>
+      <div>
+        頁首內容緣落在 <b>80 / 1184</b>，卡片右緣卻停在 <b>1080</b>。
+        <span>右側差 104px，左側更歪 —— 這就是你講的「寬度」。頁首容器是 <code>max-w-6xl</code>（1152px），
+        集數列表卻包在 <code>max-w-4xl</code>（896px）裡，兩者相差 256px。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 新版 ============ -->
+  <section class="specimen">
+    <div class="spec-head">
+      <span class="tag next">新版</span>
+      <h2>漸層站名標誌</h2>
+      <span class="src">PR #1，尚未 merge 進 main</span>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">localhost:3000 · feat/compact-header-wordmark</span>
+      </div>
+      <div class="fit" id="fitNext">
+        <div class="viewport v-next" id="vpNext">
+          <nav class="nav">
+            <div class="navouter"><div class="navrow">
+              <a class="wordmark" href="#"><span class="jp">福嶋晴菜の</span><span class="grad">「はるまとぺーじ」</span></a>
+              <span class="tagline">非公式節目內容檔案庫・全 10 回收錄</span>
+              <div class="icons">
+                <a class="btn yt" href="#" aria-label="YouTube 播放清單"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></a>
+                <a class="btn" href="#" aria-label="X"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+                <button class="btn" aria-label="設定"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              </div>
+            </div></div>
+          </nav>
+          <div class="page">
+            <div class="hero">福嶋晴菜の<span class="grad">「はるまとぺーじ」</span></div>
+            <div class="listwrap">
+              <div class="row">
+                <div class="datecol">2026-08-22</div>
+                <div class="nodecol"><u></u><i></i></div>
+                <div class="card">
+                  <div class="chips"><span class="chip ep">第 10 回</span><span class="chip guest">來賓：佐藤榛夏</span></div>
+                  <h3>嘉賓佐藤榛夏登場！回顧深厚友誼與生日驚喜</h3>
+                  <p>迎來了同為聲優的好友「佐藤榛夏」作為嘉賓，福嶋晴菜送上了充滿夏日風情的「彩虹素麵」與企鵝圖案的杯墊作為生日驚喜禮物。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rulers" id="rulNext"></div>
+      </div>
+    </div>
+
+    <div class="verdict good">
+      <span>✓</span>
+      <div>
+        站名左緣、圖標右緣、列表左右緣全部落在 <b>184 / 1080</b>。。
+        <span>作法是頁首往內收 —— 外層維持 <code>max-w-6xl px-6</code>，裡面再包一層 <code>max-w-4xl</code>，和集數列表用完全相同的結構。列表寬度不動。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 量測表 ============ -->
+  <h2 class="sec">實測座標</h2>
+  <p class="sec-note">兩站皆在 1265px 可視寬度下，以 <code>getBoundingClientRect()</code> 直接讀取，不是從截圖推估。</p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>元素</th><th>現況 左</th><th>現況 右</th><th>新版 左</th><th>新版 右</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>頁首左側（藥丸 / 站名）</td><td class="num miss">80</td><td class="num">274</td><td class="num hit">184</td><td class="num">512</td></tr>
+        <tr><td>頁首圖標群</td><td class="num">953</td><td class="num miss">1184</td><td class="num">944</td><td class="num hit">1080</td></tr>
+        <tr><td>首頁大標 <code>h1</code></td><td class="num">80</td><td class="num">1184</td><td class="num">80</td><td class="num">1184</td></tr>
+        <tr><td>集數列表區塊</td><td class="num">184</td><td class="num">1080</td><td class="num hit">184</td><td class="num hit">1080</td></tr>
+        <tr><td>集數卡片（時間軸右側）</td><td class="num">376</td><td class="num">1080</td><td class="num">376</td><td class="num">1080</td></tr>
+        <tr><td>頁首 vs 列表 左右落差</td><td class="num miss" colspan="2">左 −104 / 右 +104</td><td class="num hit" colspan="2">0 / 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 改動 ============ -->
+  <h2 class="sec">merge 之後站上會變的三件事</h2>
+  <p class="sec-note">改動集中在 <code>src/components/Header.tsx</code>，外加 <code>HomeEpisodeList.tsx</code> 的一行。</p>
+  <ul class="changes">
+    <li>
+      <span class="kind">左上角</span>
+      <h4>紫色藥丸 → 漸層站名</h4>
+      <p>改成純文字，<code>福嶋晴菜の</code> 用基本色，<code>「はるまとぺーじ」</code> 沿用首頁大標同一組紫→綠漸層。顏色全走 <code>brand-purple</code> / <code>brand-green</code> 變數，沒有寫死色碼。視窗小於 640px 時只留後半段。</p>
+    </li>
+    <li>
+      <span class="kind">頁首</span>
+      <h4>頁首往內收，對齊集數列表</h4>
+      <p>列表寬度完全不動。改的是頁首：外層維持 <code>max-w-6xl px-6</code>，裡面再包一層 <code>max-w-4xl mx-auto</code>，和 <code>HomeEpisodeList</code> 的結構一模一樣。站名左緣貼齊日期欄，圖標右緣貼齊卡片右緣。</p>
+    </li>
+    <li class="warn">
+      <span class="kind">取捨</span>
+      <h4>「影片清單」四個字消失</h4>
+      <p>播放清單按鈕變成純圓形圖標，和你給的參考圖一致。<code>title</code> 與 <code>aria-label</code> 都保留，滑過去有提示、輔助工具讀得到，但辨識度確實下降。想留字的話講一聲。</p>
+    </li>
+  </ul>
+
+  <h2 class="sec">還沒處理的</h2>
+  <p class="sec-note">不在這次改動範圍內，列出來讓你決定要不要一起處理。</p>
+  <ul class="changes">
+    <li class="warn">
+      <span class="kind">重複</span>
+      <h4>首頁大標和頁首站名長得一樣</h4>
+      <p><code>src/app/page.tsx</code> 仍然在頁首正下方渲染同一串文字，所以首頁上這行字連續出現兩次 —— 上面兩個模擬視窗裡都看得到。刪掉大約 8 行的事，但超出你原本要求的範圍，所以我沒動。</p>
+    </li>
+    <li class="warn">
+      <span class="kind">既有問題</span>
+      <h4><code>npm run lint</code> 在 main 上本來就是紅的</h4>
+      <p><code>TranscriptMode.tsx</code> 有三個 <code>no-explicit-any</code> 錯誤，跟這次改動無關，但連帶讓 <code>npm run verify</code> 過不了。<code>npm run build</code> 本身正常，Pages 部署不受影響。</p>
+    </li>
+  </ul>
+
+  <footer>
+    量測時間 2026-09-06 ・ 現況取自 jruei.github.io（commit e4339d4）・ 新版取自 feat/compact-header-wordmark（commit 01dbc52）<br>
+    本頁為 1:1 CSS 複製，非截圖；斷點行為以 container query 模擬，對應實機 media query。
+  </footer>
+</div>
+
+<script>
+(function(){
+  var slider  = document.getElementById('w');
+  var wv      = document.getElementById('wv');
+  var bpOut   = document.getElementById('bp');
+  var gchk    = document.getElementById('g');
+  var presets = document.querySelectorAll('.presets button');
+
+  var specs = [
+    { vp:document.getElementById('vpNow'),  fit:document.getElementById('fitNow'),  rul:document.getElementById('rulNow'),  list:896,  navPadMobile:16, headMax:Infinity },
+    { vp:document.getElementById('vpNext'), fit:document.getElementById('fitNext'), rul:document.getElementById('rulNext'), list:896,  navPadMobile:24, headMax:896 }
+  ];
+
+  function bpName(w){
+    if (w >= 1280) return 'xl';
+    if (w >= 1024) return 'lg';
+    if (w >= 768)  return 'md';
+    if (w >= 640)  return 'sm';
+    return 'base';
+  }
+
+  // 依實際 DOM 規則推算邊界，與縮放無關
+  function edges(w, spec){
+    var outerW  = Math.min(1152, w);
+    var navPad  = w >= 768 ? 24 : spec.navPadMobile;
+    var navL    = (w - outerW) / 2 + navPad;   // nav > .max-w-6xl.px-*
+    var navR    = w - navL;
+    var rowW    = Math.min(spec.headMax, navR - navL);
+    var headL   = navL + (navR - navL - rowW) / 2;
+    var pageL   = (w - outerW) / 2 + 24;       // main > .max-w-6xl.px-6
+    var pageR   = w - pageL;
+    var listW   = Math.min(spec.list, pageR - pageL);
+    var listL   = pageL + (pageR - pageL - listW) / 2;
+    return { headL:headL, headR:headL + rowW, cardR:listL + listW, cardL:listL };
+  }
+
+  function line(cls, x, k){
+    var d = document.createElement('div');
+    d.className = 'v ' + cls;
+    d.style.left = (x * k) + 'px';
+    return d;
+  }
+  function label(cls, x, k, top, text, anchorRight){
+    var d = document.createElement('div');
+    d.className = 'lab ' + cls;
+    d.style.top = top + 'px';
+    d.textContent = text;
+    d.style.left = (x * k) + 'px';
+    d.style.transform = anchorRight ? 'translateX(-100%)' : 'none';
+    return d;
+  }
+
+  function render(){
+    var w = +slider.value;
+    var k = 1;
+
+    specs.forEach(function(s){
+      s.vp.style.width = w + 'px';
+      var avail = s.fit.clientWidth || w;
+      k = Math.min(1, avail / w);
+      s.vp.style.transform = k < 1 ? 'scale(' + k + ')' : 'none';
+      s.fit.style.height = Math.ceil(s.vp.offsetHeight * k) + 'px';
+
+      s.rul.innerHTML = '';
+      if (!gchk.checked) { s.rul.classList.add('off'); return; }
+      s.rul.classList.remove('off');
+
+      var e = edges(w, s);
+      s.rul.appendChild(line('head', e.headL, k));
+      s.rul.appendChild(line('head', e.headR, k));
+      s.rul.appendChild(label('p', e.headL, k, 6, '頁首 ' + Math.round(e.headL), false));
+      s.rul.appendChild(label('p', e.headR, k, 6, '頁首 ' + Math.round(e.headR), true));
+
+      var off = Math.abs(e.cardR - e.headR) > 1 || Math.abs(e.cardL - e.headL) > 1;
+      if (off) {
+        s.rul.appendChild(line('card', e.cardL, k));
+        s.rul.appendChild(line('card', e.cardR, k));
+        s.rul.appendChild(label('g', e.cardL, k, 26, '列表 ' + Math.round(e.cardL), false));
+        s.rul.appendChild(label('g', e.cardR, k, 26, '列表 ' + Math.round(e.cardR), true));
+      } else {
+        s.rul.appendChild(label('g', e.headR, k, 26, '列表 ' + Math.round(e.cardL) + ' / ' + Math.round(e.cardR) + '（對齊）', true));
+      }
+    });
+
+    wv.textContent = w;
+    bpOut.textContent = bpName(w);
+    presets.forEach(function(b){ b.classList.toggle('on', +b.dataset.w === w); });
+  }
+
+  slider.addEventListener('input', render);
+  presets.forEach(function(b){
+    b.addEventListener('click', function(){ slider.value = b.dataset.w; render(); });
+  });
+  gchk.addEventListener('change', render);
+  window.addEventListener('resize', render);
+  window.addEventListener('load', function(){ setTimeout(render, 60); });
+
+  render();
+  setTimeout(render, 120);
+})();
+</script>
+</body>
+</html>
