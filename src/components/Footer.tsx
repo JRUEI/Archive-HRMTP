@@ -17,7 +17,7 @@ export default function Footer() {
             </div>
 
             <a
-              href="https://github.com/JRUEI/harumatope-archive"
+              href="https://github.com/JRUEI/Archive-HRMTP"
               target="_blank"
               rel="noopener noreferrer"
               className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-brand-purple dark:hover:text-brand-purple hover:border-brand-purple/40 dark:hover:border-brand-purple/40 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
@@ -43,7 +43,7 @@ export default function Footer() {
               <li>
                 若權利人對本站內容有任何疑慮，請透過{' '}
                 <a
-                  href="https://github.com/JRUEI/harumatope-archive/issues"
+                  href="https://github.com/JRUEI/Archive-HRMTP/issues"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand-purple hover:underline underline-offset-4 font-medium"

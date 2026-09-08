@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const isGithubActions = process.env.GITHUB_ACTIONS || false;
-const repoName = 'harumatope-archive';
+const repoName = 'Archive-HRMTP';
 
 const securityHeaders = [
   {
