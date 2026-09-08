@@ -30,8 +30,8 @@ const notoSans = Noto_Sans_TC({
 });
 
 export const metadata: Metadata = {
-  title: "はるまとぺーじ 檔案庫",
-  description: "福嶋晴菜の「はるまとぺーじ」非公式節目內容檔案庫",
+  title: "「はるまとぺーじ」アーカイブ",
+  description: "「はるまとぺーじ」非公式內容整理庫",
   // 個人存檔用途，不希望被搜尋引擎收錄
   robots: {
     index: false,

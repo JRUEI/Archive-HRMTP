@@ -17,10 +17,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
   const episode = getEpisodeData(resolvedParams.id);
-  if (!episode) return { title: 'はるまとぺーじ 檔案庫' };
+  if (!episode) return { title: '「はるまとぺーじ」アーカイブ' };
   return {
-    title: `第${episode.episodeNumber}回 ${episode.title} — はるまとぺーじ 檔案庫`,
-    description: episode.summary[0] || `福嶋晴菜「はるまとぺーじ」第${episode.episodeNumber}回`,
+    title: `第${episode.episodeNumber}回 ${episode.title} — 「はるまとぺーじ」アーカイブ`,
+    description: episode.summary[0] || `「はるまとぺーじ」第${episode.episodeNumber}回`,
   };
 }
 

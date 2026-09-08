@@ -10,10 +10,10 @@ export default function Footer() {
           {/* 站名與原始碼連結 */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="text-base font-black tracking-tight">
-              <span className="text-zinc-900 dark:text-white">福嶋晴菜の</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-brand-green">
                 「はるまとぺーじ」
               </span>
+              <span className="text-zinc-900 dark:text-white">アーカイブ</span>
             </div>
 
             <a
@@ -27,21 +27,14 @@ export default function Footer() {
             </a>
           </div>
 
-          {/* 免責聲明 */}
+          {/* 聲明：不另立標題，直接接在站名下方 */}
           <div className="border-t border-zinc-100 dark:border-zinc-900 pt-6">
-            <h2 className="text-xs font-black tracking-widest text-zinc-400 dark:text-zinc-500 mb-3">
-              免責聲明
-            </h2>
             <ul className="flex flex-col gap-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
               <li>
-                本專案為粉絲自製的<span className="font-bold text-zinc-700 dark:text-zinc-300">非官方（非公式）</span>
-                內容整理與影音檔案庫，與福嶋晴菜本人及節目相關權利方均無隸屬或合作關係。
+                本專案為粉絲自製的非公式內容整理庫。
               </li>
               <li>
-                本站重製之文字內容僅供粉絲學習、推廣與文化交流之用，著作權均歸原權利人所有。
-              </li>
-              <li>
-                若權利人對本站內容有任何疑慮，請透過{' '}
+                若相關權利人對本站內容有任何疑慮，請透過{' '}
                 <a
                   href="https://github.com/JRUEI/Archive-HRMTP/issues"
                   target="_blank"

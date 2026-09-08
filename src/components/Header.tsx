@@ -42,10 +42,10 @@ export default function Header() {
           href="/"
           className="text-lg md:text-2xl font-black tracking-tight whitespace-nowrap transition-opacity hover:opacity-80"
         >
-          <span className="hidden sm:inline text-zinc-900 dark:text-white">福嶋晴菜の</span>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-brand-green">
             「はるまとぺーじ」
           </span>
+          <span className="hidden sm:inline text-zinc-900 dark:text-white">アーカイブ</span>
         </Link>
 
         {/* 右上角：外部連結與設定收合成一份清單 */}
