@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>標語位置 · はるまとぺーじ</title>
+<style>
+  :root{
+    --ground:#09090b; --card:#18181b; --line:#27272a;
+    --ink:#fafafa; --muted:#a1a1aa; --dim:#71717a;
+    --purple:#c084fc; --green:#34d399;
+    --chrome:#111113; --chrome2:#1a1a1e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:32px 28px 72px;background:var(--chrome);color:var(--ink);
+    font:400 14px/1.6 -apple-system,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+  }
+  .wrap{max-width:1400px;margin:0 auto}
+  h1{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0}
+  .warn{display:inline-block;margin:14px 0 26px;padding:7px 14px;border-radius:999px;
+        background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.35);
+        color:var(--purple);font-size:12.5px;font-weight:700}
+
+  .panel{background:var(--chrome2);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:26px}
+  .grp{display:flex;flex-wrap:wrap;gap:22px 34px;align-items:flex-start}
+  .grp > div{min-width:0}
+  .lab{font-size:11.5px;letter-spacing:.06em;color:var(--dim);font-weight:700;margin-bottom:9px}
+  .seg{display:flex;gap:7px;flex-wrap:wrap}
+  .seg button{padding:8px 15px;border-radius:999px;cursor:pointer;background:#26262b;border:1px solid #35353c;
+              color:var(--muted);font:700 13px/1 inherit;transition:.15s}
+  .seg button:hover{color:var(--ink);border-color:#4a4a55}
+  .seg button.on{background:var(--purple);border-color:var(--purple);color:#1a1020}
+  .sl{min-width:210px}
+  .sl label{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+  .sl .nm{font-size:12.5px;color:var(--muted);font-weight:600}
+  .sl .val{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .sl .cls{font:600 11px/1 ui-monospace,Consolas,monospace;color:var(--dim)}
+  .sl input{width:100%;accent-color:var(--purple);cursor:pointer}
+
+  /* 上下排，讓模擬頁面能用接近 1:1 的比例顯示 */
+  .panes{display:grid;grid-template-columns:1fr;gap:22px}
+  .pane{background:var(--chrome2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .paneHead{padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .paneHead b{font-size:13.5px}
+  .paneHead .tot{font:700 12px/1 ui-monospace,Consolas,monospace;color:var(--dim);font-variant-numeric:tabular-nums}
+  .fit{position:relative;padding:14px 118px 14px 14px}
+  .vp{transform-origin:top left;background:var(--ground);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .rulers{position:absolute;inset:14px 14px 14px 0;pointer-events:none}
+
+  .mark{position:absolute;right:0;width:104px;border-top:1px dashed rgba(192,132,252,.55);
+        border-bottom:1px dashed rgba(192,132,252,.55);display:flex;align-items:center}
+  .mark::before{content:"";position:absolute;left:0;top:0;bottom:0;width:1px;background:rgba(192,132,252,.35)}
+  .mark span{padding-left:9px;line-height:1.25}
+  .mark .px{display:block;font:800 12px/1.2 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;color:var(--purple)}
+  .mark .who{display:block;font-size:10.5px;color:var(--dim);white-space:nowrap}
+  .mark.tiny .who{display:none}
+  .mark.chg{border-color:rgba(52,211,153,.6)}
+  .mark.chg::before{background:rgba(52,211,153,.4)}
+  .mark.chg .px{color:var(--green)}
+
+  /* ---- 模擬頁面（1280px 座標系） ---- */
+  .mock{width:1280px}
+  .m-nav{height:65px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;background:rgba(9,9,11,.9)}
+  .m-navin{max-width:1152px;margin:0 auto;width:100%}
+  .m-navrow{max-width:896px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;position:relative}
+  .m-mark{font-weight:900;font-size:22px;letter-spacing:-.02em;white-space:nowrap}
+  .m-mark i{font-style:normal;background:linear-gradient(90deg,var(--purple),var(--green));
+            -webkit-background-clip:text;background-clip:text;color:transparent}
+  .m-icons{display:flex;gap:8px}
+  .m-icons b{width:38px;height:38px;border-radius:999px;background:#26262b;display:block}
+  .m-navtag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+            color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.05em;white-space:nowrap}
+
+  .m-body{max-width:1152px;margin:0 auto;padding:0 24px}
+  .m-list{max-width:896px;margin:0 auto}
+  .m-tag{color:var(--muted);font-weight:500;letter-spacing:.05em;white-space:nowrap;
+         display:flex;align-items:center;gap:16px}
+  .m-tag.mid{justify-content:center}
+  .m-tag .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .m-tag .rule.off{display:none}
+
+  .m-row{display:flex;gap:16px}
+  .m-date{width:112px;text-align:right;padding-top:26px;color:var(--dim);font-size:14px;flex:none}
+  .m-rail{width:32px;flex:none;position:relative}
+  .m-dot{position:absolute;top:36px;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:999px;background:#3f3f46}
+  .m-line{position:absolute;top:36px;bottom:-32px;left:50%;transform:translateX(-50%);width:4px;background:#27272a}
+  .m-card{flex:1;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px}
+  .m-pills{display:flex;gap:8px;margin-bottom:16px}
+  .m-pill{height:31px;border-radius:999px;background:#27272a}
+  .m-title{height:36px;border-radius:6px;background:#3f3f46;margin-bottom:16px;width:72%}
+  .m-text{height:14px;border-radius:4px;background:#27272a;margin-bottom:8px}
+
+  .gapband{background:repeating-linear-gradient(45deg,rgba(192,132,252,.07) 0 6px,transparent 6px 12px)}
+  .gapband.chg{background:repeating-linear-gradient(45deg,rgba(52,211,153,.09) 0 6px,transparent 6px 12px)}
+  .tagband{outline:1px dashed rgba(52,211,153,.5);outline-offset:0}
+
+  table{width:100%;border-collapse:collapse;margin-top:26px;font-size:13px}
+  caption{text-align:left;font-weight:800;font-size:15px;padding:0 0 10px}
+  th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--dim);font-weight:700;font-size:11.5px;letter-spacing:.06em}
+  td.n{font:700 13px/1.5 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.n.up{color:var(--green)} td.n.same{color:var(--dim)}
+  code{font:600 12px/1.5 ui-monospace,Consolas,monospace;background:#26262b;border:1px solid #33333a;
+       border-radius:5px;padding:1px 6px;color:#e4e4e7}
+  .foot{margin-top:28px;color:var(--dim);font-size:12.5px;line-height:1.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>標語位置</h1>
+  <p class="sub">把「非公式節目內容檔案庫・全 10 回收錄」從頁首欄內搬到頁首下方那段留白。1280px 桌機寬度。</p>
+  <div class="warn">預覽用，程式碼還沒動</div>
+
+  <div class="panel">
+    <div class="grp">
+      <div>
+        <div class="lab">對齊</div>
+        <div class="seg" id="segAlign"></div>
+      </div>
+      <div>
+        <div class="lab">字級</div>
+        <div class="seg" id="segSize"></div>
+      </div>
+      <div>
+        <div class="lab">右側延伸細線</div>
+        <div class="seg" id="segRule"></div>
+      </div>
+      <div class="sl">
+        <label><span class="nm">頁首 → 標語</span>
+          <span><span class="val" id="v_top"></span> <span class="cls" id="c_top"></span></span></label>
+        <input type="range" id="r_top" min="0" max="15" step="1">
+      </div>
+      <div class="sl">
+        <label><span class="nm">標語 → 首卡</span>
+          <span><span class="val" id="v_bot"></span> <span class="cls" id="c_bot"></span></span></label>
+        <input type="range" id="r_bot" min="0" max="15" step="1">
+      </div>
+    </div>
+  </div>
+
+  <div class="panes">
+    <div class="pane">
+      <div class="paneHead"><b>現況：標語在頁首欄內</b><span class="tot" id="totA"></span></div>
+      <div class="fit" id="fitA"><div class="vp" id="vpA"></div><div class="rulers" id="rulA"></div></div>
+    </div>
+    <div class="pane">
+      <div class="paneHead"><b>調整後：標語在頁首下方</b><span class="tot" id="totB"></span></div>
+      <div class="fit" id="fitB"><div class="vp" id="vpB"></div><div class="rulers" id="rulB"></div></div>
+    </div>
+  </div>
+
+  <table>
+    <caption>要改哪裡</caption>
+    <thead><tr><th>項目</th><th>現況</th><th>調整後</th><th>檔案</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <p class="foot">
+    標語搬走之後，頁首欄內只剩站名（左）和三顆圖示（右），中間那組
+    <code>absolute left-1/2 -translate-x-1/2</code> 的置中定位就可以整段刪掉。<br>
+    「靠左」是貼齊集數列表的左緣（1280 時 x=192），跟站名、頁尾同一條線；「置中」則對齊頁面中線 x=640。<br>
+    這裡調的是 <code>sm:</code> 以上的桌機值。手機寬度下標語原本是隱藏的（<code>hidden md:flex</code>），搬出來之後就有空間可以一起顯示，要不要顯示再決定。
+  </p>
+</div>
+
+<script>
+(function(){
+  var SCALE = [0,8,12,16,20,24,28,32,40,48,56,64,80,96,112,128];
+  var CLS   = [0, 2, 3, 4, 5, 6, 7, 8,10,12,14,16,20,24,28, 32];
+  function idxOf(px){ var b=0,d=1e9; for(var i=0;i<SCALE.length;i++){var t=Math.abs(SCALE[i]-px); if(t<d){d=t;b=i;}} return b; }
+  function clsOf(px){ return CLS[idxOf(px)]; }
+
+  var ALIGN = [ {k:'left', nm:'靠左（貼齊列表）'}, {k:'mid', nm:'置中'} ];
+  var SIZE  = [ {k:12, nm:'12px · text-xs'}, {k:14, nm:'14px · text-sm'} ];
+  var RULE  = [ {k:false, nm:'關'}, {k:true, nm:'開'} ];
+
+  var state = { align:'left', size:12, rule:false, top:32, bot:24 };
+
+  var TAG = '非公式節目內容檔案庫・全 10 回收錄';
+
+  function card(){
+    return '<div class="m-card">'
+      + '<div class="m-pills"><div class="m-pill" style="width:96px"></div><div class="m-pill" style="width:132px"></div></div>'
+      + '<div class="m-title"></div>'
+      + '<div class="m-text" style="width:100%"></div><div class="m-text" style="width:86%"></div></div>';
+  }
+  function row(){
+    return '<div class="m-row"><div class="m-date">2026-08-22</div>'
+      + '<div class="m-rail"><div class="m-line"></div><div class="m-dot"></div></div>' + card() + '</div>';
+  }
+  function band(h, chg, who, cls){
+    return '<div class="gapband'+(chg?' chg':'')+(cls?' '+cls:'')+'" style="height:'+h+'px"'
+         + (who ? ' data-who="'+who+'" data-px="'+h+'"' : '') + '></div>';
+  }
+  function nav(withTag){
+    return '<div class="m-nav"><div class="m-navin"><div class="m-navrow">'
+      + '<div class="m-mark">福嶋晴菜の<i>「はるまとぺーじ」</i></div>'
+      + (withTag ? '<div class="m-navtag">'+TAG+'</div>' : '')
+      + '<div class="m-icons"><b></b><b></b><b></b></div>'
+      + '</div></div></div>';
+  }
+
+  // 現況：標語在欄內，頁首下方是 64px 的純留白
+  function buildNow(){
+    return '<div class="mock">' + nav(true)
+      + '<div class="m-body">' + band(64, false, '頁首 → 首卡')
+      + '<div class="m-list">' + row() + '</div></div></div>';
+  }
+
+  // 調整後：標語獨立成一行
+  function buildNext(v){
+    var tag = '<div class="m-tag'+(v.align==='mid'?' mid':'')+'" data-tagline="1" '
+            + 'style="font-size:'+v.size+'px">'
+            + '<span>'+TAG+'</span>'
+            + '<span class="rule'+(v.rule && v.align==='left' ? '' : ' off')+'"></span>'
+            + '</div>';
+    return '<div class="mock">' + nav(false)
+      + '<div class="m-body">' + band(v.top, true, '頁首 → 標語')
+      + '<div class="m-list">' + tag + band(v.bot, true, '標語 → 首卡') + row() + '</div>'
+      + '</div></div>';
+  }
+
+  function paint(vpId, rulId, fitId, totId, html){
+    var vp = document.getElementById(vpId);
+    vp.style.transform = 'none'; vp.style.width = '1280px';
+    vp.innerHTML = html;
+
+    var total = vp.offsetHeight;
+    var fit = document.getElementById(fitId);
+    var k = (fit.clientWidth - 118 - 14) / 1280;
+    var vpTop = vp.getBoundingClientRect().top;
+
+    var out = '', els = vp.querySelectorAll('[data-who]');
+    for (var i=0;i<els.length;i++){
+      var el = els[i], r = el.getBoundingClientRect();
+      var h = Math.max(r.height * k, 1);
+      var chg = el.className.indexOf('chg') !== -1;
+      out += '<div class="mark'+(chg?' chg':'')+(h<26?' tiny':'')+'" '
+           + 'style="top:'+((r.top-vpTop)*k)+'px;height:'+h+'px">'
+           + '<span><em class="px">'+el.getAttribute('data-px')+'px</em>'
+           + '<em class="who">'+el.getAttribute('data-who')+'</em></span></div>';
+    }
+    // 頁首 → 首卡 的合計（只標在調整後那欄）
+    var tagEl = vp.querySelector('[data-tagline]');
+    if (tagEl){
+      var nv = vp.querySelector('.m-nav').getBoundingClientRect();
+      var cd = vp.querySelector('.m-row').getBoundingClientRect();
+      var top = (nv.bottom - vpTop) * k, h2 = (cd.top - nv.bottom) * k;
+      out += '<div class="mark chg" style="top:'+top+'px;height:'+h2+'px;right:auto;left:-2px;'
+           + 'width:2px;border-color:transparent"></div>';
+      document.getElementById(totId).textContent =
+        '頁首 → 首卡 ' + Math.round(cd.top - nv.bottom) + 'px';
+    } else {
+      document.getElementById(totId).textContent = '頁首 → 首卡 64px';
+    }
+
+    vp.style.transform = 'scale(' + k + ')';
+    fit.style.height = Math.ceil(total * k) + 28 + 'px';
+    document.getElementById(rulId).innerHTML = out;
+  }
+
+  function table(){
+    var alignTxt = state.align === 'mid' ? '置中（x=640）' : '靠左（x=192，與站名同線）';
+    var rows =
+        '<tr><td>標語位置</td><td>頁首欄內、絕對定位置中</td>'
+      + '<td class="n up">頁首下方獨立一行</td>'
+      + '<td>src/components/Header.tsx → src/app/page.tsx</td></tr>'
+      + '<tr><td>對齊</td><td>頁面中線</td><td class="n up">'+alignTxt+'</td><td>src/app/page.tsx</td></tr>'
+      + '<tr><td>字級</td><td class="n same">12px（text-xs）</td>'
+      + '<td class="n '+(state.size===12?'same':'up')+'">'+state.size+'px（text-'+(state.size===12?'xs':'sm')+'）</td>'
+      + '<td>src/app/page.tsx</td></tr>'
+      + '<tr><td>頁首 → 標語</td><td class="n same">—</td>'
+      + '<td class="n up">'+state.top+'px（<code>sm:pt-'+clsOf(state.top)+'</code>）</td>'
+      + '<td>src/app/page.tsx</td></tr>'
+      + '<tr><td>標語 → 首卡</td><td class="n same">—</td>'
+      + '<td class="n up">'+state.bot+'px（<code>mb-'+clsOf(state.bot)+'</code>）</td>'
+      + '<td>src/app/page.tsx</td></tr>'
+      + '<tr><td>右側延伸細線</td><td class="n same">無</td>'
+      + '<td class="n '+(state.rule?'up':'same')+'">'+(state.rule && state.align==='left' ? '有' : '無')+'</td>'
+      + '<td>src/app/page.tsx</td></tr>';
+    document.getElementById('tbody').innerHTML = rows;
+  }
+
+  function seg(id, list, key){
+    var h = '';
+    for (var i=0;i<list.length;i++)
+      h += '<button data-i="'+i+'"'+(list[i].k===state[key]?' class="on"':'')+'>'+list[i].nm+'</button>';
+    var el = document.getElementById(id);
+    el.innerHTML = h;
+    el.onclick = function(e){
+      var i = e.target.getAttribute('data-i');
+      if (i === null) return;
+      state[key] = list[+i].k;
+      render();
+    };
+  }
+
+  function render(){
+    seg('segAlign', ALIGN, 'align');
+    seg('segSize',  SIZE,  'size');
+    seg('segRule',  RULE,  'rule');
+    document.getElementById('v_top').textContent = state.top + 'px';
+    document.getElementById('c_top').textContent = 'sm:pt-' + clsOf(state.top);
+    document.getElementById('v_bot').textContent = state.bot + 'px';
+    document.getElementById('c_bot').textContent = 'mb-' + clsOf(state.bot);
+    document.getElementById('r_top').value = idxOf(state.top);
+    document.getElementById('r_bot').value = idxOf(state.bot);
+
+    paint('vpA','rulA','fitA','totA', buildNow());
+    paint('vpB','rulB','fitB','totB', buildNext(state));
+    table();
+  }
+
+  document.getElementById('r_top').addEventListener('input', function(e){ state.top = SCALE[+e.target.value]; render(); });
+  document.getElementById('r_bot').addEventListener('input', function(e){ state.bot = SCALE[+e.target.value]; render(); });
+  window.addEventListener('resize', render);
+
+  render();
+  setTimeout(render, 120);
+  window.addEventListener('load', render);
+})();
+</script>
+</body>
+</html>
