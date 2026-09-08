@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>頂部留白對齊卡片間距</title>
+<style>
+  :root{
+    --purple:#c084fc; --green:#34d399; --gold:#E8C97A;
+    --bg:#09090b; --panel:#101013; --card:#18181b; --line:#27272a;
+    --txt:#fafafa; --dim:#a1a1aa; --dimmer:#71717a;
+    --band:rgba(192,132,252,.16); --bandline:rgba(192,132,252,.55);
+    --ref:rgba(52,211,153,.16); --refline:rgba(52,211,153,.6);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:"Noto Sans TC","Segoe UI",system-ui,sans-serif;
+    font-size:14px; line-height:1.6; padding:32px 24px 80px;
+  }
+  .wrap{max-width:1420px;margin:0 auto}
+
+  h1{font-size:22px;font-weight:900;letter-spacing:.02em;margin:0 0 6px}
+  .lede{color:var(--dim);margin:0 0 4px;max-width:76ch}
+  .lede b{color:var(--txt)}
+  .metric{color:var(--dimmer);font-size:13px;margin:0 0 26px}
+  .metric code{color:var(--gold);font-family:ui-monospace,Consolas,monospace}
+
+  /* ---------- 控制列 ---------- */
+  .ctrl{
+    display:flex;flex-wrap:wrap;align-items:center;gap:22px;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:14px 18px;margin-bottom:26px;position:sticky;top:12px;z-index:20;
+    backdrop-filter:blur(8px);
+  }
+  .ctrl .grp{display:flex;align-items:center;gap:10px}
+  .ctrl label{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.06em;white-space:nowrap}
+  .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{
+    background:transparent;border:0;color:var(--dim);
+    font-family:inherit;font-size:12px;font-weight:700;
+    padding:7px 13px;cursor:pointer;white-space:nowrap;
+    border-right:1px solid var(--line);transition:.15s;
+  }
+  .seg button:last-child{border-right:0}
+  .seg button:hover{color:var(--txt);background:rgba(255,255,255,.04)}
+  .seg button.on{background:var(--purple);color:#1a1a1a}
+  input[type=range]{width:150px;accent-color:var(--purple)}
+  .val{
+    font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--gold);
+    min-width:70px;display:inline-block;
+  }
+  .val.match{color:var(--green)}
+
+  /* ---------- 面板 ---------- */
+  .panes{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .pane{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:16px 16px 18px;flex:0 0 auto;
+  }
+  .pane.sel{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
+  .ptitle{font-size:13px;font-weight:900;margin:0 0 2px;letter-spacing:.03em}
+  .psub{font-size:11.5px;color:var(--dimmer);margin:0 0 12px;min-height:17px}
+  .tot{font-family:ui-monospace,Consolas,monospace;color:var(--gold)}
+  .tot.match{color:var(--green)}
+
+  .stage{display:flex;gap:0;align-items:flex-start}
+  .vp{
+    position:relative;overflow:hidden;border-radius:10px;
+    background:var(--bg);border:1px solid var(--line);
+  }
+  /* 固定版面寬度：.vp 稍後會被縮到 SCALE 倍，mock 不能跟著縮 */
+  .mock{transform-origin:top left;width:1280px}
+
+  /* ---------- 模擬件（實際尺寸，之後整體縮放） ---------- */
+  .m-nav{
+    height:64px;border-bottom:1px solid var(--line);
+    background:rgba(9,9,11,.9);position:relative;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .m-mark{
+    font-size:24px;font-weight:900;letter-spacing:-.02em;white-space:nowrap;line-height:1;
+  }
+  .m-mark .a{color:#fafafa}
+  .m-mark .b{
+    background:linear-gradient(90deg,var(--purple),var(--green));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .m-btn{
+    position:absolute;right:24px;top:50%;transform:translateY(-50%);
+    width:40px;height:40px;border-radius:999px;background:#18181b;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .m-btn i{display:block;width:16px;height:2px;background:var(--dim);box-shadow:0 -5px 0 var(--dim),0 5px 0 var(--dim)}
+
+  .m-body{padding:0 24px}
+  .m-inner{max-width:896px;margin:0 auto}
+  .m-tag{
+    font-size:12px;line-height:16px;font-weight:500;letter-spacing:.08em;
+    color:#a1a1aa;text-align:center;
+  }
+  .m-card{
+    background:#18181b;border:1px solid var(--line);border-radius:16px;
+    padding:32px;
+  }
+  .m-pills{display:flex;gap:8px;margin-bottom:16px}
+  .m-pill{
+    font-size:14px;font-weight:700;letter-spacing:.06em;
+    padding:6px 16px;border-radius:999px;line-height:1.4;
+  }
+  .m-pill.g{background:var(--green);color:#0b0b0b}
+  .m-pill.p{background:#27272a;color:var(--purple)}
+  .m-pill.b{background:rgba(59,130,246,.2);color:#93c5fd}
+  .m-h2{font-size:30px;line-height:1.3;font-weight:700;margin:0}
+  .m-sum{font-size:18px;line-height:1.7;color:#a1a1aa;margin:16px 0 0}
+
+  /* ---------- 量測帶 ---------- */
+  .gapband{position:relative}
+  .gapband::after{
+    content:"";position:absolute;inset:0;
+    background:var(--band);
+    border-top:1px dashed var(--bandline);border-bottom:1px dashed var(--bandline);
+  }
+  .gapband[data-ref="1"]::after{background:var(--ref);border-color:var(--refline)}
+
+  /* ---------- 尺規 ---------- */
+  .ruler{position:relative;margin-left:14px;flex:0 0 auto}
+  .mark{position:absolute;left:0;display:flex;align-items:center;gap:7px}
+  .mark .bar{
+    width:9px;border-left:1px solid var(--bandline);
+    border-top:1px solid var(--bandline);border-bottom:1px solid var(--bandline);
+    box-sizing:border-box;
+  }
+  .mark[data-ref="1"] .bar{border-color:var(--refline)}
+  .mark .lab{font-size:11px;line-height:1.35;white-space:nowrap}
+  .mark .who{display:block;color:var(--dim)}
+  .mark .px{display:block;font-family:ui-monospace,Consolas,monospace;color:var(--gold)}
+  .mark[data-ref="1"] .px{color:var(--green)}
+  .mark[data-match="1"] .px{color:var(--green)}
+
+  /* ---------- 程式碼表 ---------- */
+  .code{
+    margin-top:30px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:18px 20px;
+  }
+  .code h2{font-size:13px;font-weight:900;letter-spacing:.06em;margin:0 0 12px;color:var(--dim)}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;letter-spacing:.08em;color:var(--dimmer);font-weight:700}
+  td.f{font-family:ui-monospace,Consolas,monospace;color:var(--gold);white-space:nowrap}
+  td.n{color:var(--dim)}
+  tr:last-child td{border-bottom:0}
+  .del{color:#f87171;text-decoration:line-through}
+  .add{color:var(--green)}
+  .note{color:var(--dimmer);font-size:12.5px;margin:14px 0 0;line-height:1.75}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 22px;font-size:12px;color:var(--dimmer)}
+  .legend span{display:flex;align-items:center;gap:7px}
+  .sw{width:15px;height:11px;border-radius:2px;display:inline-block}
+  .sw.b{background:var(--band);border:1px dashed var(--bandline)}
+  .sw.r{background:var(--ref);border:1px dashed var(--refline)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>頂部留白：跟卡片間距對齊</h1>
+  <p class="lede">
+    卡片與卡片之間是 <b>32px</b>（<code>gap-6 sm:gap-8</code>）。標語上下現在各只有 <b>12px</b>，
+    所以它被夾在頁首和首卡中間，看起來像被壓扁。下面把上下留白拉到跟卡片間距同一個數值來比對。
+  </p>
+  <p class="metric">
+    實測基準（1280px，dev server）：頁首底 <code>65</code> ／ 標語 <code>77–93</code>（高 16px）／ 首卡頂 <code>105</code>
+    ・上 <code>12</code>・下 <code>12</code>・卡片間距 <code>32</code>
+  </p>
+
+  <div class="ctrl">
+    <div class="grp">
+      <label>候選</label>
+      <div class="seg" id="segPick">
+        <button data-k="now">現況 12/12</button>
+        <button data-k="A">A 32/32</button>
+        <button data-k="B">B 24/32</button>
+        <button data-k="C">C 32/24</button>
+        <button data-k="D">D 20/20</button>
+      </div>
+    </div>
+    <div class="grp">
+      <label>頁首 → 標語</label>
+      <input type="range" id="rTop" min="0" max="48" step="4" value="32">
+      <span class="val" id="vTop">32px</span>
+    </div>
+    <div class="grp">
+      <label>標語 → 首卡</label>
+      <input type="range" id="rBot" min="0" max="48" step="4" value="32">
+      <span class="val" id="vBot">32px</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw b"></i>要調整的留白</span>
+    <span><i class="sw r"></i>卡片間距 32px（基準，不動）</span>
+    <span style="color:var(--green)">綠色數字 = 已經和 32px 對齊</span>
+  </div>
+
+  <div class="panes" id="panes"></div>
+
+  <div class="code">
+    <h2>對應改動</h2>
+    <table>
+      <thead><tr><th style="width:230px">檔案</th><th style="width:230px">現在</th><th>改成</th><th style="width:150px">效果</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <p class="note">
+      Tailwind 間距刻度：<code style="color:var(--gold)">3</code>=12px・<code style="color:var(--gold)">5</code>=20px・
+      <code style="color:var(--gold)">6</code>=24px・<code style="color:var(--gold)">8</code>=32px。
+      只動 <code style="color:var(--gold)">md:</code> 這一段，手機版的 <code style="color:var(--gold)">pt-10 sm:pt-16</code> 不受影響
+      —— 標語在手機上本來就是 <code style="color:var(--gold)">hidden md:block</code>，不顯示。
+    </p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var PRESETS = {
+    now: { top:12, bot:12, name:'現況', sub:'標語被夾在中間，上下比卡片間距窄了 20px' },
+    A:   { top:32, bot:32, name:'候選 A', sub:'上下都等於卡片間距 —— 節奏完全一致' },
+    B:   { top:24, bot:32, name:'候選 B', sub:'下側對齊卡片，上側略收，標語偏向頁首' },
+    C:   { top:32, bot:24, name:'候選 C', sub:'上側對齊卡片，標語偏向首卡' },
+    D:   { top:20, bot:20, name:'候選 D', sub:'放大但不到 32，折衷' }
+  };
+  var ORDER = ['now','A','B','C','D'];
+  var REF = 32;                       // 卡片間距基準
+  var VW = 1280, SCALE = 0.42;        // 模擬寬度與縮放
+
+  var state = { pick:'A', top:32, bot:32 };
+
+  var panes  = document.getElementById('panes');
+  var tbody  = document.getElementById('tbody');
+  var rTop   = document.getElementById('rTop');
+  var rBot   = document.getElementById('rBot');
+  var vTop   = document.getElementById('vTop');
+  var vBot   = document.getElementById('vBot');
+
+  function px(n){ return n + 'px'; }
+
+  // Tailwind 刻度：px -> class 數字
+  var SCALE_MAP = {0:'0',4:'1',8:'2',12:'3',16:'4',20:'5',24:'6',28:'7',32:'8',36:'9',40:'10',44:'11',48:'12'};
+  function cls(prefix, n){
+    var k = SCALE_MAP[n];
+    return k === undefined ? prefix + '-[' + n + 'px]' : prefix + '-' + k;
+  }
+
+  function mockHTML(top, bot){
+    return ''
+      + '<div class="mock">'
+      +   '<div class="m-nav">'
+      +     '<div class="m-mark"><span class="a">福嶋晴菜の</span><span class="b">「はるまとぺーじ」</span></div>'
+      +     '<div class="m-btn"><i></i></div>'
+      +   '</div>'
+      +   '<div class="m-body"><div class="m-inner">'
+      +     '<div class="gapband" data-who="頁首 → 標語" data-px="' + top + '" style="height:' + px(top) + '"></div>'
+      +     '<div class="m-tag">非公式節目內容檔案庫・全 10 回收錄</div>'
+      +     '<div class="gapband" data-who="標語 → 首卡" data-px="' + bot + '" style="height:' + px(bot) + '"></div>'
+      +     card(true)
+      +     '<div class="gapband" data-ref="1" data-who="卡片 → 卡片" data-px="' + REF + '" style="height:' + px(REF) + '"></div>'
+      +     card(false)
+      +   '</div></div>'
+      + '</div>';
+  }
+
+  function card(latest){
+    return ''
+      + '<div class="m-card">'
+      +   '<div class="m-pills">'
+      +     '<span class="m-pill ' + (latest ? 'g' : 'p') + '">第 ' + (latest ? '10' : '9') + ' 回</span>'
+      +     '<span class="m-pill b">個人回</span>'
+      +   '</div>'
+      +   '<h2 class="m-h2">' + (latest ? '最終回・這一年的はるまとぺ' : '第九回・收音機前的來信') + '</h2>'
+      +   '<p class="m-sum">點擊查看本集精華與完整文字紀錄。</p>'
+      + '</div>';
+  }
+
+  function buildPane(key){
+    var p = PRESETS[key];
+    var isLive = (key === state.pick);
+    var top = isLive ? state.top : p.top;
+    var bot = isLive ? state.bot : p.bot;
+    var total = top + 16 + bot;
+
+    var pane = document.createElement('div');
+    pane.className = 'pane' + (isLive ? ' sel' : '');
+    pane.id = 'pane_' + key;
+    pane.innerHTML = ''
+      + '<p class="ptitle">' + p.name + '　' + top + ' / ' + bot + '</p>'
+      + '<p class="psub">' + p.sub + '</p>'
+      + '<div class="stage">'
+      +   '<div class="vp" style="width:' + px(VW) + '">' + mockHTML(top, bot) + '</div>'
+      +   '<div class="ruler"></div>'
+      + '</div>'
+      + '<p class="ptitle" style="margin-top:12px;font-weight:700">頁首底 → 首卡 '
+      +   '<span class="tot' + (total === REF ? ' match' : '') + '">' + total + 'px</span></p>';
+    return pane;
+  }
+
+  function render(){
+    panes.innerHTML = '';
+    ORDER.forEach(function(k){ panes.appendChild(buildPane(k)); });
+    ORDER.forEach(measure);
+    renderTable();
+  }
+
+  // 先量真實尺寸，再縮放；尺規畫在沒被縮放的圖層上
+  function measure(key){
+    var pane = document.getElementById('pane_' + key);
+    var vp   = pane.querySelector('.vp');
+    var mock = pane.querySelector('.mock');
+    var rul  = pane.querySelector('.ruler');
+
+    var base = mock.getBoundingClientRect();
+    var bands = Array.prototype.slice.call(mock.querySelectorAll('.gapband')).map(function(b){
+      var r = b.getBoundingClientRect();
+      return {
+        who: b.getAttribute('data-who'),
+        px:  +b.getAttribute('data-px'),
+        ref: b.getAttribute('data-ref') === '1',
+        top: r.top - base.top,
+        h:   r.height
+      };
+    });
+    var fullH = base.height;
+
+    mock.style.transform = 'scale(' + SCALE + ')';
+    vp.style.width  = Math.round(VW * SCALE) + 'px';
+    // +1：縮放後的小數高度會讓最後一列卡片被裁掉 1px
+    vp.style.height = Math.ceil(fullH * SCALE) + 1 + 'px';
+
+    rul.style.width  = '118px';
+    rul.style.height = Math.ceil(fullH * SCALE) + 1 + 'px';
+    rul.innerHTML = bands.map(function(b){
+      var t = Math.round(b.top * SCALE);
+      var h = Math.max(Math.round(b.h * SCALE), 1);
+      var match = (!b.ref && b.px === REF) ? ' data-match="1"' : '';
+      return '<div class="mark"' + (b.ref ? ' data-ref="1"' : '') + match
+        + ' style="top:' + t + 'px;height:' + h + 'px">'
+        + '<span class="bar" style="height:' + h + 'px"></span>'
+        + '<span class="lab"><span class="who">' + b.who + '</span>'
+        + '<span class="px">' + b.px + 'px</span></span></div>';
+    }).join('');
+  }
+
+  function renderTable(){
+    var top = state.top, bot = state.bot;
+    tbody.innerHTML = ''
+      + row('src/app/page.tsx', '外層 <div> 的上內距',
+            'md:pt-3', cls('md:pt', top), '頁首 → 標語 ' + top + 'px')
+      + row('src/app/page.tsx', '標語 <p> 的下外距',
+            'mb-3', cls('mb', bot), '標語 → 首卡 ' + bot + 'px')
+      + '<tr><td class="n">src/components/HomeEpisodeList.tsx</td>'
+      +   '<td class="n">卡片容器（基準，不改）</td>'
+      +   '<td class="f" style="color:var(--green)">gap-6 sm:gap-8</td>'
+      +   '<td class="n">卡片間距 32px</td></tr>';
+  }
+
+  function row(file, what, from, to, effect){
+    var same = (from === to);
+    return '<tr><td class="n">' + file + '<br><span style="color:var(--dimmer);font-size:11.5px">' + what + '</span></td>'
+      + '<td class="f"><span class="' + (same ? '' : 'del') + '">' + from + '</span></td>'
+      + '<td class="f"><span class="' + (same ? '' : 'add') + '">' + to + '</span></td>'
+      + '<td class="n">' + effect + '</td></tr>';
+  }
+
+  function syncCtrl(){
+    rTop.value = state.top; rBot.value = state.bot;
+    vTop.textContent = state.top + 'px';
+    vBot.textContent = state.bot + 'px';
+    vTop.className = 'val' + (state.top === REF ? ' match' : '');
+    vBot.className = 'val' + (state.bot === REF ? ' match' : '');
+    Array.prototype.forEach.call(document.querySelectorAll('#segPick button'), function(b){
+      b.classList.toggle('on', b.getAttribute('data-k') === state.pick);
+    });
+  }
+
+  document.getElementById('segPick').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    var k = b.getAttribute('data-k');
+    state.pick = k; state.top = PRESETS[k].top; state.bot = PRESETS[k].bot;
+    syncCtrl(); render();
+  });
+
+  rTop.addEventListener('input', function(){ state.top = +rTop.value; syncCtrl(); render(); });
+  rBot.addEventListener('input', function(){ state.bot = +rBot.value; syncCtrl(); render(); });
+
+  syncCtrl();
+  render();
+})();
+</script>
+</body>
+</html>
