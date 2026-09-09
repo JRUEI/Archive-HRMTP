@@ -488,13 +488,13 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
 
       </div>
 
-      {/* 4. 常駐畫面右側邊緣的懸浮快捷按鈕群 */}
-      <div className="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2.5">
+      {/* 4. 常駐畫面右側邊緣的懸浮快捷按鈕群（僅 xl 以上顯示：字幕群卡片最寬 max-w-4xl，視窗小於 1280px 時懸浮鈕會壓到卡片，故改用下方控制列的同功能按鈕） */}
+      <div className="hidden xl:flex fixed right-5 top-1/2 -translate-y-1/2 z-40 flex-col gap-2.5">
         {/* 畫面定位按鈕 */}
         <button
           type="button"
           onClick={scrollToTheaterView}
-          className="bg-white/95 dark:bg-zinc-900/95 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold p-2.5 sm:p-3 rounded-2xl shadow-xl flex flex-col items-center gap-1.5 transition-all hover:scale-110 border border-emerald-200 dark:border-emerald-800/60 backdrop-blur group"
+          className="bg-white/95 dark:bg-zinc-900/95 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold p-3 rounded-2xl shadow-xl flex flex-col items-center gap-1.5 transition-all hover:scale-110 border border-emerald-200 dark:border-emerald-800/60 backdrop-blur group"
           title="畫面定位：一鍵平滑滾動畫面對齊至播放器與字幕"
         >
           <Crosshair size={18} className="text-emerald-600 dark:text-emerald-400 transition group-hover:rotate-45" />
@@ -507,7 +507,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
         <button
           type="button"
           onClick={() => setIsDrawerOpen(true)}
-          className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold px-2.5 sm:px-3 py-3 sm:py-3.5 rounded-2xl shadow-2xl flex flex-col items-center gap-1.5 transition-all hover:scale-110 border border-emerald-300/40 group"
+          className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold px-3 py-3.5 rounded-2xl shadow-2xl flex flex-col items-center gap-1.5 transition-all hover:scale-110 border border-emerald-300/40 group"
           title="展開逐字稿抽屜 (支援全文搜尋)"
         >
           <FileText size={18} className="text-zinc-950 transition group-hover:rotate-6" />
