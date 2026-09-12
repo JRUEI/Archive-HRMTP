@@ -14,6 +14,7 @@ interface PaginatedCard {
   content: string[];
   contentChunk: string[];
   displayTitle: string;
+  scale: number;
 }
 
 interface RenderableCard {
@@ -23,6 +24,7 @@ interface RenderableCard {
   content?: string[];
   contentChunk?: string[];
   displayTitle?: string;
+  scale?: number;
 }
 
 interface ExportableCardProps {
@@ -37,7 +39,7 @@ interface ExportableCardProps {
 // --- Card Style Constants (inline styles required for html-to-image export) ---
 const CARD_STYLES = {
   // Shared
-  footer: { fontSize: '24px', fontWeight: 300 as const, color: '#aaa', margin: 0, letterSpacing: '0.03em' },
+  footer: { fontSize: '30px', fontWeight: 300 as const, color: '#aaa', margin: 0, letterSpacing: '0.03em' },
   footerDivider: (isDark: boolean) => ({ borderTop: `1px solid ${isDark ? '#444' : '#E5E7EB'}`, paddingTop: '32px', flexShrink: 0 as const }),
   serif: (size: number, weight: number, color: string) => ({
     fontFamily: 'var(--font-serif)', fontSize: `${size}px`, fontWeight: weight, color, lineHeight: 1.35 as const, margin: 0,
@@ -51,9 +53,9 @@ const CARD_STYLES = {
     borderLeft: `6px solid ${isDark ? '#c084fc' : '#9333ea'}`,
     padding: '28px 36px', borderRadius: '0 12px 12px 0', margin: '24px 0',
   }),
-  quoteText: (isDark: boolean) => ({
-    fontFamily: 'var(--font-serif)', fontSize: '30px', fontWeight: 700 as const,
-    color: isDark ? '#eee' : '#444', lineHeight: 1.65 as const, margin: 0,
+  quoteText: (isDark: boolean, scale = 1) => ({
+    fontFamily: 'var(--font-serif)', fontSize: `${Q_FS * scale}px`, fontWeight: 700 as const,
+    color: isDark ? '#eee' : '#444', lineHeight: Q_LH, margin: 0,
   }),
   // Content card
   contentBody: (isDark: boolean) => ({
@@ -61,7 +63,7 @@ const CARD_STYLES = {
     boxShadow: '0 4px 20px rgba(0,0,0,0.03)', marginBottom: '32px', flex: 1 as const,
     display: 'flex' as const, flexDirection: 'column' as const, justifyContent: 'flex-start' as const,
   }),
-  paragraph: (color: string) => ({ fontSize: '32px', color, lineHeight: 1.8 as const, marginBottom: '28px' }),
+  paragraph: (color: string, scale = 1) => ({ fontSize: `${P_FS * scale}px`, color, lineHeight: P_LH, marginBottom: `${P_MARGIN}px` }),
   bigNumber: (isDark: boolean) => ({
     position: 'absolute' as const, top: '140px', right: '60px',
     fontFamily: 'var(--font-serif)', fontSize: '320px', fontWeight: 900 as const,
@@ -78,40 +80,142 @@ const getTagStyle = (isDark: boolean) => {
 };
 
 // --- Auto Pagination ---
-// Safe vertical height budget for 1080x1920 card (~280 weighted units)
+// 分頁用「排版高度估算」而不是字數權重：依欄寬算折行數 × 字級 × 行高 + margin。
+// 以下常數必須跟 CARD_STYLES 與 ExportableCard 的 inline style 一致，改版面時要一起改。
+const CARD_H = 1920;
+const CARD_PAD_Y = 72;
+const CONTENT_W = 1080 - 80 * 2;        // 920，標題可用寬
+const BODY_W = CONTENT_W - 56 * 2;      // 808，灰底內文框可用寬
+const TAG_BLOCK = 79 + 72;              // 標籤列高（14×2 內距 + 34px 字）+ marginBottom
+const TITLE_FS = 64;
+const TITLE_LINE = TITLE_FS * 1.35;     // 86.4
+const TITLE_GAP = 48 + 4 + 52;          // 標題下 margin + 分隔線 + 分隔線下 margin
+const BODY_CHROME = 32 + 48 * 2;        // 內文框 marginBottom + 上下內距
+const FOOTER_BLOCK = 78;                // 頁尾框線 + paddingTop + 30px 字
+const SAFETY = 24;                      // 安全邊界，估算誤差的緩衝
+
+const P_FS = 36, P_LH = 1.8;            // 段落與條列
+const Q_FS = 34, Q_LH = 1.65;           // 引用
+const P_MARGIN = 28;                    // 段落 marginBottom
+// 連續的 * 會被 markdown 併成同一個 loose list，每個 li 內層再包一層 <p>。
+// 實測 li 高 = 行數 × 行高，條目間距是 28（內層 p 的 28 與 li 的 16 合併取大），
+// ul 自己的 32px marginBottom 整串只算一次（見 bodyBudget 的 UL_MARGIN）。
+const LI_MARGIN = 28;
+const UL_MARGIN = 32;
+const BULLET_INDENT = 40;               // ul margin-left
+const Q_MARGIN = 28 * 2 + 24 * 2;       // 引用上下內距 + 上下 margin
+const Q_INSET = 6 + 36 * 2;             // 引用左框線 + 左右內距
+
+// 全形字寬算 1，半形（ASCII 與半形假名）算 0.55
+function widthInChars(text: string): number {
+  let w = 0;
+  for (const ch of text) w += /[ -ÿ｡-ﾟ]/.test(ch) ? 0.55 : 1;
+  return w;
+}
+
+// 估算前先剝掉 markdown 記號，只算畫面上看得見的字
+function stripMarks(text: string): string {
+  return text.replace(/^QUOTE:/, '').replace(/^>\s*/, '').replace(/^\*\s+/, '').replace(/\*\*/g, '');
+}
+
+function lineCount(text: string, colWidth: number, fontSize: number): number {
+  return Math.max(1, Math.ceil(widthInChars(text) / (colWidth / fontSize)));
+}
+
+// 單一條目在卡片上實際佔掉的高度（內文框是 flex column，margin 不會合併，直接相加）
+function blockHeight(item: string, scale = 1): number {
+  const text = stripMarks(item);
+  if (item.startsWith('QUOTE:') || item.startsWith('>')) {
+    const fs = Q_FS * scale;
+    return lineCount(text, BODY_W - Q_INSET, fs) * fs * Q_LH + Q_MARGIN;
+  }
+  const fs = P_FS * scale;
+  if (item.startsWith('* ')) {
+    return lineCount(text, BODY_W - BULLET_INDENT, fs) * fs * P_LH + LI_MARGIN;
+  }
+  return lineCount(text, BODY_W, fs) * fs * P_LH + P_MARGIN;
+}
+
+// 灰底內文框的可用高度。標題行數要實際算，1 行跟 2 行差 86px
+function bodyBudget(title: string): number {
+  const titleLines = lineCount(title, CONTENT_W, TITLE_FS);
+  return CARD_H - CARD_PAD_Y * 2 - TAG_BLOCK - titleLines * TITLE_LINE
+    - TITLE_GAP - BODY_CHROME - FOOTER_BLOCK - UL_MARGIN - SAFETY;
+}
+
+function packChunks(items: string[], budget: number): string[][] {
+  const chunks: string[][] = [];
+  let cur: string[] = [];
+  let used = 0;
+  for (const item of items) {
+    const h = blockHeight(item);
+    if (cur.length > 0 && used + h > budget) {
+      chunks.push(cur);
+      cur = [];
+      used = 0;
+    }
+    cur.push(item);
+    used += h;
+  }
+  if (cur.length > 0) chunks.push(cur);
+  return chunks;
+}
+
+// 貪婪切會把內容全塞進前幾張、最後一張只剩一兩條留一大片白。
+// 先用完整預算貪婪切一次得到張數 k，再二分搜「還能維持 k 張的最小高度上限」，用那個上限重切。
+function evenChunks(items: string[], budget: number): string[][] {
+  const k = packChunks(items, budget).length;
+  if (k <= 1) return packChunks(items, budget);
+  let lo = Math.max(...items.map(i => blockHeight(i)));
+  let hi = budget;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) / 2;
+    if (packChunks(items, mid).length <= k) hi = mid;
+    else lo = mid;
+  }
+  return packChunks(items, hi);
+}
+
+// 單一條目本身就超過一張卡時縮字級。高度大致與字級平方成正比（字小 → 每行字多、行高也小）
+function chunkScale(chunk: string[], budget: number): number {
+  const h = chunk.reduce((a, i) => a + blockHeight(i), 0);
+  return h <= budget ? 1 : Math.max(0.7, Math.sqrt(budget / h));
+}
+
+// 精簡總結是一張塞完、不能分頁的海報，超出只會被 overflow:hidden 默默裁掉，
+// 畫面上完全看不出來，所以同樣估高度再縮字級。
+const SUM_TITLE_W = CONTENT_W - 40 * 2;   // h1 左右各 40 內距
+const SUM_LI_W = CONTENT_W - 56 * 2 - 2 - 60; // 內文框內寬扣掉 ✦ 與 gap
+const SUM_LI_FS = 32, SUM_LI_LH = 1.65, SUM_LI_MARGIN = 36;
+const SUM_CHROME = 116 + 60 + 130 + 102;  // 標籤列 + 標題下 margin + 內文框內距框線 + 頁尾
+
+function summaryScale(points: string[], title: string): number {
+  const titleLines = lineCount(title, SUM_TITLE_W, 64);
+  const budget = CARD_H - 80 * 2 - SUM_CHROME - titleLines * (64 * 1.4) - SAFETY;
+  const h = points.reduce((a, p, i) =>
+    a + lineCount(p, SUM_LI_W, SUM_LI_FS) * SUM_LI_FS * SUM_LI_LH
+      + (i === points.length - 1 ? 0 : SUM_LI_MARGIN), 0);
+  return h <= budget ? 1 : Math.max(0.6, Math.sqrt(budget / h));
+}
+
 function paginateCards(cards: EpisodeCard[]) {
   const paginated: PaginatedCard[] = [];
-  
+
   cards.forEach(card => {
-    let currentChunk: string[] = [];
-    let currentWeight = 0;
-    const maxWeight = 260; // Strict threshold to prevent content overflowing 1920px
-    
-    const paragraphs = [...card.content];
-
-    paragraphs.forEach(p => {
-      const isQuote = p.startsWith('QUOTE:') || p.startsWith('>');
-      const isBullet = p.startsWith('* ');
-      // Quotes and bullet points occupy extra vertical line-height, padding and margins
-      const weight = p.length + (isQuote ? 120 : isBullet ? 40 : 0);
-
-      const wouldOverflow = (currentWeight + weight > maxWeight && currentChunk.length > 0) ||
-                            (currentChunk.length >= 3) ||
-                            (currentChunk.length >= 2 && isQuote);
-
-      if (wouldOverflow) {
-        paginated.push({ ...card, contentChunk: [...currentChunk], displayTitle: '' });
-        currentChunk = [p];
-        currentWeight = weight;
-      } else {
-        currentChunk.push(p);
-        currentWeight += weight;
-      }
-    });
-
-    if (currentChunk.length > 0) {
-      paginated.push({ ...card, contentChunk: currentChunk, displayTitle: '' });
+    // 「(1/9)」這種分頁後綴會讓標題多一行，預算得照切開後的標題算，所以反覆到張數收斂
+    let chunks = evenChunks(card.content, bodyBudget(card.title));
+    for (let pass = 0; pass < 3; pass++) {
+      const suffix = chunks.length > 1 ? ` (${chunks.length}/${chunks.length})` : '';
+      const next = evenChunks(card.content, bodyBudget(card.title + suffix));
+      const settled = next.length === chunks.length;
+      chunks = next;
+      if (settled) break;
     }
+    const suffix = chunks.length > 1 ? ` (${chunks.length}/${chunks.length})` : '';
+    const budget = bodyBudget(card.title + suffix);
+    chunks.forEach(chunk => {
+      paginated.push({ ...card, contentChunk: chunk, displayTitle: '', scale: chunkScale(chunk, budget) });
+    });
   });
 
   // Number them if split
@@ -188,6 +292,7 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
 
   // Summary Card (Standalone Poster Style)
   if (card.type === 'summary') {
+    const ss = card.scale ?? 1;
     return (
       <div className={`export-card ${isPreview ? 'absolute inset-0' : 'relative'} w-[1080px] h-[1920px] overflow-hidden box-border flex flex-col justify-center p-[80px]`} style={{ background: isDark ? '#111' : '#F9FAFB' }}>
         <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '800px', height: '800px', background: isDark ? 'radial-gradient(circle, rgba(192,132,252,0.08) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(147,51,234,0.08) 0%, transparent 70%)', borderRadius: '50%' }}></div>
@@ -207,8 +312,8 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
           <div style={{ background: isDark ? '#222' : '#FFFFFF', borderRadius: '24px', padding: '64px 56px', border: isDark ? '1px solid #333' : '1px solid #E5E7EB', boxShadow: isDark ? '0 20px 40px rgba(0,0,0,0.4)' : '0 20px 40px rgba(0,0,0,0.05)' }}>
             <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
               {(card.contentChunk || []).map((point: string, i: number) => (
-                <li key={i} style={{ fontSize: '32px', color: isDark ? '#EBEBEB' : '#333333', lineHeight: 1.65, marginBottom: i === (card.contentChunk || []).length - 1 ? 0 : '36px', display: 'flex', gap: '24px' }}>
-                  <span style={{ color: isDark ? '#C084FC' : '#9333EA', fontSize: '36px', lineHeight: 1.4, flexShrink: 0 }}>✦</span>
+                <li key={i} style={{ fontSize: `${SUM_LI_FS * ss}px`, color: isDark ? '#EBEBEB' : '#333333', lineHeight: SUM_LI_LH, marginBottom: i === (card.contentChunk || []).length - 1 ? 0 : `${SUM_LI_MARGIN * ss}px`, display: 'flex', gap: '24px' }}>
+                  <span style={{ color: isDark ? '#C084FC' : '#9333EA', fontSize: `${36 * ss}px`, lineHeight: 1.4, flexShrink: 0 }}>✦</span>
                   <div>{point}</div>
                 </li>
               ))}
@@ -230,8 +335,9 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
   const titleColor = isDark ? '#FFFFFF' : '#111111';
   const textColor = isDark ? '#DDDDDD' : '#333333';
   
-  const contentIndex = index; 
+  const contentIndex = index;
   const totalContent = Math.max(1, totalCards - 2);
+  const s = card.scale ?? 1;
 
   return (
     <div className={`export-card ${isPreview ? 'absolute inset-0' : 'relative'} w-[1080px] h-[1920px] overflow-hidden box-border flex flex-col p-[72px_80px]`} style={{ background: cardBg }}>
@@ -242,8 +348,8 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
       
       <div style={{ marginBottom: '72px' }}>
         {card.tag && (
-          <div className="whitespace-nowrap inline-flex items-center" style={{ ...getTagStyle(isDark), borderRadius: '6px', padding: '10px 22px' }}>
-            <span style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '0.06em' }}>{card.tag}</span>
+          <div className="whitespace-nowrap inline-flex items-center" style={{ ...getTagStyle(isDark), borderRadius: '8px', padding: '14px 28px' }}>
+            <span style={{ fontSize: '34px', fontWeight: 700, letterSpacing: '0.06em' }}>{card.tag}</span>
           </div>
         )}
       </div>
@@ -268,13 +374,13 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
                   const quoteText = props.children.replace('QUOTE:', '');
                   return (
                     <div style={CARD_STYLES.quoteBlock(isDark)}>
-                      <p style={CARD_STYLES.quoteText(isDark)}>
+                      <p style={CARD_STYLES.quoteText(isDark, s)}>
                         「{quoteText}」
                       </p>
                     </div>
                   );
                 }
-                return <p style={CARD_STYLES.paragraph(textColor)} {...props} />;
+                return <p style={CARD_STYLES.paragraph(textColor, s)} {...props} />;
               },
               strong: ({node, ...props}) => {
                 void node;
@@ -282,11 +388,11 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
               },
               ul: ({node, ...props}) => {
                 void node;
-                return <ul className={isDark ? "marker:text-[#c084fc]" : "marker:text-[#059669]"} style={{ margin: '0 0 32px 40px', padding: 0 }} {...props} />;
+                return <ul className={isDark ? "marker:text-[#c084fc]" : "marker:text-[#059669]"} style={{ margin: `0 0 32px ${BULLET_INDENT}px`, padding: 0 }} {...props} />;
               },
               li: ({node, ...props}) => {
                 void node;
-                return <li style={{ fontSize: '32px', color: textColor, lineHeight: 1.8, marginBottom: '16px', listStyleType: 'disc' }} {...props} />;
+                return <li style={{ fontSize: `${P_FS * s}px`, color: textColor, lineHeight: P_LH, marginBottom: '16px', listStyleType: 'disc' }} {...props} />;
               },
               blockquote: ({node, ...props}) => {
                 void node;
@@ -382,7 +488,7 @@ export default function CardMode({ episode, isLossless }: { episode: EpisodeData
   
   if (!isLossless) {
     cardsToRender = [
-      { type: 'summary', contentChunk: episode.summary }
+      { type: 'summary', contentChunk: episode.summary, scale: summaryScale(episode.summary, episode.title) }
     ];
   } else {
     const pCards = paginateCards(episode.cards);
