@@ -75,7 +75,7 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 ## 6. 不可亂動
 
 - `src/components/TranscriptMode.tsx` 的 `const isHost = line.speaker === '福嶋晴菜';`
-  （389 與 622 行）是承重的，改名會讓主持人樣式整組失效。
+  （目前 402 與 638 行，字幕群與抽屜各一處）是承重的，改名會讓主持人樣式整組失效。
 - 品牌色只能改 `src/app/globals.css` 的 `:root` 變數（`--color-brand-purple` / `--color-brand-green`，
   light/dark 兩組），**不准寫死在 component 裡**。
 - 時間碼統一 `MM:SS`。`timeToSeconds()` 兩種格式都吃，但顯示端只輸出 `MM:SS`，
@@ -88,6 +88,7 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 改完照這個順序，每一步都要看到結果再往下：
 
 ```bash
+npm run verify                     # lint + typecheck + build，要零 error、零 warning
 GITHUB_ACTIONS=1 npm run build     # 要能產出 out/
 grep -rl "noindex" out | wc -l     # 頁數要對得上
 git push
@@ -95,14 +96,7 @@ gh run watch                       # build ✓ 且 deploy ✓
 curl -sI https://jruei.github.io/Archive-HRMTP/
 ```
 
-`npm run verify` 目前**過不了**，見下一節。
-
 ## 8. 已知未解
 
-- `npm run lint` 有 3 個既存 `@typescript-eslint/no-explicit-any`
-  （`TranscriptMode.tsx` 第 9、69、270 行）加 1 個 warning（第 332 行 `activeLine` 沒用到），
-  連帶 `npm run verify` 失敗。`npm run build` 正常。
-- 本機殘留分支：`feat/compact-header-wordmark`（已併入，`-d` 可刪）、
-  `master`（`5a31732 Initial commit from Create Next App`，要 `-D`）。
 - `content/ep08.ja.vtt` 仍缺。
 - ep04 的四列 `[工作人員]` 沒有文本佐證。

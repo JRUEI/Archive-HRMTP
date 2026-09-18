@@ -34,13 +34,13 @@ export default function HomeEpisodeList({ episodes }: { episodes: EpisodeListIte
                     ${isLatest ? 'w-5 h-5 bg-brand-green' : 'w-4 h-4 bg-zinc-300 dark:bg-zinc-700 group-hover:bg-brand-purple'}
                   `}></div>
 
-                  {/* 連接下一集的垂直線 (起點 36px, 終點跨越 Gap 抵達下一個 36px) */}
+                  {/* 連接下一集的垂直線 (起點 36px, 終點跨越 Gap 抵達下一個 36px：36 + 列表 gap 24/32) */}
                   <div className={`absolute w-1 left-1/2 -translate-x-1/2 transition-all duration-300 z-0 ${
-                    index === episodes.length - 1 
+                    index === episodes.length - 1
                       ? 'top-[36px] h-32 bg-gradient-to-b from-zinc-200 dark:from-zinc-800 to-transparent'
-                      : (isLatest 
-                          ? 'top-[36px] bottom-[-36px] sm:bottom-[-52px] bg-gradient-to-b from-brand-green to-zinc-200 dark:to-zinc-800'
-                          : 'top-[36px] bottom-[-36px] sm:bottom-[-52px] bg-zinc-200 dark:bg-zinc-800 group-hover:bg-brand-purple/50')
+                      : (isLatest
+                          ? 'top-[36px] bottom-[-60px] sm:bottom-[-68px] bg-gradient-to-b from-brand-green to-zinc-200 dark:to-zinc-800'
+                          : 'top-[36px] bottom-[-60px] sm:bottom-[-68px] bg-zinc-200 dark:bg-zinc-800 group-hover:bg-brand-purple/50')
                   }`}></div>
                 </div>
 

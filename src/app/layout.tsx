@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Serif_TC, Noto_Sans_TC } from "next/font/google";
+import { Geist_Mono, Noto_Serif_TC, Noto_Sans_TC } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Header from "@/components/Header";
@@ -7,20 +7,18 @@ import Footer from "@/components/Footer";
 import { FocusModeProvider } from "@/components/FocusModeProvider";
 import { HomeLayoutProvider } from "@/components/HomeLayoutProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
+// 等寬字只用在逐字稿、襯線字只用在圖卡，兩者都要點進去才會出現，不必每頁預載
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 const notoSerif = Noto_Serif_TC({
   variable: "--font-noto-serif-tc",
   weight: ["400", "700", "900"],
   subsets: ["latin"],
+  preload: false,
 });
 
 const notoSans = Noto_Sans_TC({
@@ -113,7 +111,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSerif.variable} ${notoSans.variable} font-sans antialiased bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300 min-h-screen`}
+        className={`${geistMono.variable} ${notoSerif.variable} ${notoSans.variable} font-sans antialiased bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300 min-h-screen`}
       >
         <ThemeProvider
           attribute="class"

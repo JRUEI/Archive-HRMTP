@@ -4,12 +4,25 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
 import { Search, Play, X, FileText, Crosshair } from 'lucide-react';
 
+// 只宣告這裡用得到的 YouTube IFrame API
+interface YTPlayer {
+  seekTo(seconds: number, allowSeekAhead: boolean): void;
+  playVideo(): void;
+  getCurrentTime(): number;
+  destroy(): void;
+}
+
 declare global {
   interface Window {
-    YT: any;
+    YT?: {
+      Player: new (elementId: string, options: object) => YTPlayer;
+      PlayerState: { PLAYING: number };
+    };
     onYouTubeIframeAPIReady: () => void;
   }
 }
+
+const GROUP_SIZE_KEY = 'harumatope_transcript_groupsize_v2';
 
 // 時間字串轉換為秒數 (支援 MM:SS 或 HH:MM:SS)
 function timeToSeconds(timeStr: string): number {
@@ -48,25 +61,27 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
   const [isPlayerReady, setIsPlayerReady] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   // 自訂字幕群句數（預設 4 句，可自訂 1~5 句，純狀態調整，絕不中斷或重啟影片）
+  // 逐字稿模式只在點擊後才掛載，這裡一定在瀏覽器端執行
   const [groupSize, setGroupSize] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('harumatope_transcript_groupsize_v2');
-      if (saved) {
-        const parsed = parseInt(saved, 10);
-        if (parsed >= 1 && parsed <= 5) return parsed;
-      }
+    try {
+      const parsed = parseInt(window.localStorage.getItem(GROUP_SIZE_KEY) ?? '', 10);
+      if (parsed >= 1 && parsed <= 5) return parsed;
+    } catch {
+      // 無痕模式或停用 Cookie 時讀不到儲存空間，沿用預設
     }
     return 4;
   });
 
   const handleSetGroupSize = useCallback((num: number) => {
     setGroupSize(num);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('harumatope_transcript_groupsize_v2', String(num));
+    try {
+      window.localStorage.setItem(GROUP_SIZE_KEY, String(num));
+    } catch {
+      // 記不住就算了，不影響本次操作
     }
   }, []);
 
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
   const theaterRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -267,9 +282,9 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
               setIsPlayerReady(true);
               startProgressLoopRef.current();
             },
-            onStateChange: (event: any) => {
+            onStateChange: (event: { data: number }) => {
               if (!isMounted) return;
-              if (event.data === window.YT.PlayerState.PLAYING) {
+              if (event.data === window.YT?.PlayerState.PLAYING) {
                 startProgressLoopRef.current();
               }
             },
@@ -328,8 +343,6 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
     const kw = searchKeyword.toLowerCase();
     return line.text.toLowerCase().includes(kw) || line.speaker.toLowerCase().includes(kw);
   });
-
-  const activeLine = activeIndex >= 0 ? parsedLines[activeIndex] : null;
 
   return (
     <div className="w-full">
@@ -529,21 +542,24 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
       )}
 
       {/* 6. 側邊滑動抽屜面板 */}
+      {/* 關閉時 inert：移出 Tab 順序與無障礙樹，也擋掉點擊 */}
       <aside
+        inert={!isDrawerOpen}
         className={`fixed top-0 right-0 h-full w-full sm:w-[500px] md:w-[540px] bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 z-50 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
-          isDrawerOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
+          isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* 抽屜頂部 Header */}
-        <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-zinc-900 dark:text-white">完整逐字稿列表</h2>
-            <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-full font-mono font-medium">
+        <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+          {/* 手機寬度放不下整列：句數在搜尋框右側已有，這裡先藏；標題過長時截斷而不是逐字折行 */}
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-base font-bold text-zinc-900 dark:text-white truncate">完整逐字稿列表</h2>
+            <span className="hidden sm:inline text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-full font-mono font-medium">
               {parsedLines.length} 句
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 whitespace-nowrap">
             {/* 定位當前播放句按鈕 */}
             <button
               type="button"
