@@ -427,6 +427,7 @@ export default function CardMode({ episode, isLossless }: { episode: EpisodeData
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullScale, setFullScale] = useState(1);
+  const [isFullBleed, setIsFullBleed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenContainerRef = useRef<HTMLDivElement>(null);
   
@@ -460,15 +461,19 @@ export default function CardMode({ episode, isLossless }: { episode: EpisodeData
   useEffect(() => {
     if (isFullscreen) {
       const updateFullScale = () => {
-        // Reserve 32px horizontal padding and 88px vertical padding (for top action bar and margins)
-        const paddingX = 32;
-        const paddingY = 88;
+        // 手機（< sm）左右不留白；頂列按鈕底緣在 53px，讓出 56px（遮罩的 pt-14）、底部留 8px。
+        // 桌機維持左右 32、上下共 88 的留白。
+        const isPhone = window.innerWidth < 640;
+        const paddingX = isPhone ? 0 : 32;
+        const paddingY = isPhone ? 56 + 8 : 88;
         const availW = Math.max(200, window.innerWidth - paddingX);
         const availH = Math.max(300, window.innerHeight - paddingY);
-        
-        const scaleX = availW / 1080;
-        const scaleY = availH / 1920;
-        setFullScale(Math.min(scaleX, scaleY));
+
+        const scale = Math.min(availW / 1080, availH / 1920);
+        setFullScale(scale);
+        // 手機多半比 9:16 細長、寬度先頂到，這時貼齊兩側拿掉圓角（容差 2px，389.8 對 390 也算頂到）；
+        // 高度先頂到（如 Safari 工具列展開）就留著圓角，免得兩側剩幾 px 細縫像跑版
+        setIsFullBleed(isPhone && 1080 * scale > availW - 2);
       };
       updateFullScale();
       window.addEventListener('resize', updateFullScale);
@@ -613,7 +618,7 @@ export default function CardMode({ episode, isLossless }: { episode: EpisodeData
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-zinc-950/98 backdrop-blur-2xl flex flex-col justify-center items-center overflow-hidden touch-none select-none"
+            className="fixed inset-0 z-[9999] bg-zinc-950/98 backdrop-blur-2xl flex flex-col justify-center items-center pt-14 sm:pt-0 overflow-hidden touch-none select-none"
             onClick={() => setIsFullscreen(false)}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -662,7 +667,7 @@ export default function CardMode({ episode, isLossless }: { episode: EpisodeData
 
             {/* Scaled Container for Fullscreen - 100% Mathematically Centered */}
             <div 
-              className="relative rounded-2xl sm:rounded-[36px] overflow-hidden shadow-2xl border border-zinc-800/80 bg-zinc-950 flex-shrink-0"
+              className={`relative overflow-hidden shadow-2xl bg-zinc-950 flex-shrink-0 ${isFullBleed ? '' : 'rounded-2xl sm:rounded-[36px] border border-zinc-800/80'}`}
               style={{ 
                 width: `${Math.round(1080 * fullScale)}px`, 
                 height: `${Math.round(1920 * fullScale)}px` 
