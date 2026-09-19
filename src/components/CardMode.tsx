@@ -330,7 +330,7 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
           
           <div style={{ textAlign: 'center', marginTop: '60px' }}>
             <p style={{ fontSize: '28px', color: isDark ? '#666' : '#9ca3af', letterSpacing: '0.05em', margin: 0 }}>
-              主講人 / 福嶋晴菜 • はるまとぺーじ
+              「はるまとぺーじ」第 {episode.episodeNumber} 回
             </p>
           </div>
         </div>
