@@ -41,6 +41,16 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 - `innerWidth / 2 = 640` 是假中線，含捲軸。1280 視窗下內容欄真正的中線是 **633**。
 - 先講數字再動手。改版面前後都量，兩組數字一起報。
 
+圖卡（`CardMode.tsx`）改了字級、內文框寬或頁尾，要重量溢出。範本是 scratchpad 的 `fontprobe.mjs`：
+逐集切到圖卡，量隱藏匯出容器裡每一張 1080×1920 原尺寸卡。
+
+- 內容卡：每張 `.export-card` 的 `scrollHeight - clientHeight` 要是 0。
+- 精簡總結：看 `z-index: 10` 內層的餘裕 `clientHeight - 160 - offsetHeight`，要 ≥ 0。
+  左下裝飾圓（`bottom: -10%`）會撐大 `scrollHeight`，不能拿來判斷。
+- 分頁不量 DOM，只靠 `lineCount` 估算。每行字數用 `floor(欄寬 / 字級) - 0.5`。
+  標點不能放行首，會把前一字擠到下一行。若只用 `欄寬 / 字級`，36～44px 每種字級都會低估 10～20 段。
+  實測 `floor - 0.5` 沒有低估，是不低估的公式裡多估最少的。
+
 ## 3. Demo HTML 規範
 
 `docs/demos/demo_xxx.html`，單檔、可直接開。已驗證的做法：

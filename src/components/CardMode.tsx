@@ -94,15 +94,14 @@ const BODY_CHROME = 32 + 48 * 2;        // 內文框 marginBottom + 上下內距
 const FOOTER_BLOCK = 78;                // 頁尾框線 + paddingTop + 30px 字
 const SAFETY = 24;                      // 安全邊界，估算誤差的緩衝
 
-const P_FS = 36, P_LH = 1.8;            // 段落與條列
-const Q_FS = 34, Q_LH = 1.65;           // 引用
+const P_FS = 42, P_LH = 1.8;            // 段落與條列
+const Q_FS = 40, Q_LH = 1.65;           // 引用
 const P_MARGIN = 28;                    // 段落 marginBottom
 // 連續的 * 會被 markdown 併成同一個 loose list，每個 li 內層再包一層 <p>。
 // 實測 li 高 = 行數 × 行高，條目間距是 28（內層 p 的 28 與 li 的 16 合併取大），
 // ul 自己的 32px marginBottom 整串只算一次（見 bodyBudget 的 UL_MARGIN）。
 const LI_MARGIN = 28;
 const UL_MARGIN = 32;
-const BULLET_INDENT = 40;               // ul margin-left
 const Q_MARGIN = 28 * 2 + 24 * 2;       // 引用上下內距 + 上下 margin
 const Q_INSET = 6 + 36 * 2;             // 引用左框線 + 左右內距
 
@@ -118,8 +117,10 @@ function stripMarks(text: string): string {
   return text.replace(/^QUOTE:/, '').replace(/^>\s*/, '').replace(/^\*\s+/, '').replace(/\*\*/g, '');
 }
 
+// 一行只排得下整數個字；標點不能放行首（禁則）時會把前一字擠到下一行，
+// 實測 36～44px 平均每行再扣半字才不會低估（見 docs/agent-workflow.md）
 function lineCount(text: string, colWidth: number, fontSize: number): number {
-  return Math.max(1, Math.ceil(widthInChars(text) / (colWidth / fontSize)));
+  return Math.max(1, Math.ceil(widthInChars(text) / (Math.floor(colWidth / fontSize) - 0.5)));
 }
 
 // 單一條目在卡片上實際佔掉的高度（內文框是 flex column，margin 不會合併，直接相加）
@@ -127,11 +128,12 @@ function blockHeight(item: string, scale = 1): number {
   const text = stripMarks(item);
   if (item.startsWith('QUOTE:') || item.startsWith('>')) {
     const fs = Q_FS * scale;
-    return lineCount(text, BODY_W - Q_INSET, fs) * fs * Q_LH + Q_MARGIN;
+    // 渲染時會補上「」
+    return lineCount(`「${text}」`, BODY_W - Q_INSET, fs) * fs * Q_LH + Q_MARGIN;
   }
   const fs = P_FS * scale;
   if (item.startsWith('* ')) {
-    return lineCount(text, BODY_W - BULLET_INDENT, fs) * fs * P_LH + LI_MARGIN;
+    return lineCount(text, BODY_W, fs) * fs * P_LH + LI_MARGIN;
   }
   return lineCount(text, BODY_W, fs) * fs * P_LH + P_MARGIN;
 }
@@ -176,26 +178,32 @@ function evenChunks(items: string[], budget: number): string[][] {
   return packChunks(items, hi);
 }
 
-// 單一條目本身就超過一張卡時縮字級。高度大致與字級平方成正比（字小 → 每行字多、行高也小）
+// 字級每次縮 1%，縮到估算高度放得進預算為止。不能用平方根一次算：
+// 行數是整數，縮完常還多一行（實測精簡總結因此上下被裁 35～56px）
+function fitScale(heightAt: (s: number) => number, budget: number, min: number): number {
+  let s = 1;
+  while (s > min && heightAt(s) > budget) s -= 0.01;
+  return Math.max(min, s);
+}
+
+// 單一條目本身就超過一張卡時縮字級
 function chunkScale(chunk: string[], budget: number): number {
-  const h = chunk.reduce((a, i) => a + blockHeight(i), 0);
-  return h <= budget ? 1 : Math.max(0.7, Math.sqrt(budget / h));
+  return fitScale(s => chunk.reduce((a, i) => a + blockHeight(i, s), 0), budget, 0.7);
 }
 
 // 精簡總結是一張塞完、不能分頁的海報，超出只會被 overflow:hidden 默默裁掉，
 // 畫面上完全看不出來，所以同樣估高度再縮字級。
 const SUM_TITLE_W = CONTENT_W - 40 * 2;   // h1 左右各 40 內距
 const SUM_LI_W = CONTENT_W - 56 * 2 - 2 - 60; // 內文框內寬扣掉 ✦ 與 gap
-const SUM_LI_FS = 32, SUM_LI_LH = 1.65, SUM_LI_MARGIN = 36;
+const SUM_LI_FS = 37, SUM_LI_LH = 1.65, SUM_LI_MARGIN = 36;
 const SUM_CHROME = 116 + 60 + 130 + 102;  // 標籤列 + 標題下 margin + 內文框內距框線 + 頁尾
 
 function summaryScale(points: string[], title: string): number {
   const titleLines = lineCount(title, SUM_TITLE_W, 64);
   const budget = CARD_H - 80 * 2 - SUM_CHROME - titleLines * (64 * 1.4) - SAFETY;
-  const h = points.reduce((a, p, i) =>
-    a + lineCount(p, SUM_LI_W, SUM_LI_FS) * SUM_LI_FS * SUM_LI_LH
-      + (i === points.length - 1 ? 0 : SUM_LI_MARGIN), 0);
-  return h <= budget ? 1 : Math.max(0.6, Math.sqrt(budget / h));
+  return fitScale(s => points.reduce((a, p, i) =>
+    a + lineCount(p, SUM_LI_W, SUM_LI_FS * s) * SUM_LI_FS * s * SUM_LI_LH
+      + (i === points.length - 1 ? 0 : SUM_LI_MARGIN * s), 0), budget, 0.6);
 }
 
 function paginateCards(cards: EpisodeCard[]) {
@@ -264,7 +272,7 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
           </p>
         </div>
         <div style={{ borderTop: '1px solid #2A2A2A', paddingTop: '36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={CARD_STYLES.footer}>主講人 / 福嶋晴菜</p>
+          <p style={CARD_STYLES.footer}>「はるまとぺーじ」</p>
         </div>
       </div>
     );
@@ -388,11 +396,12 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
               },
               ul: ({node, ...props}) => {
                 void node;
-                return <ul className={isDark ? "marker:text-[#c084fc]" : "marker:text-[#059669]"} style={{ margin: `0 0 32px ${BULLET_INDENT}px`, padding: 0 }} {...props} />;
+                // 每條開頭都有綠色粗體標題，不再加項目符號
+                return <ul style={{ margin: '0 0 32px', padding: 0 }} {...props} />;
               },
               li: ({node, ...props}) => {
                 void node;
-                return <li style={{ fontSize: `${P_FS * s}px`, color: textColor, lineHeight: P_LH, marginBottom: '16px', listStyleType: 'disc' }} {...props} />;
+                return <li style={{ fontSize: `${P_FS * s}px`, color: textColor, lineHeight: P_LH, marginBottom: '16px', listStyleType: 'none' }} {...props} />;
               },
               blockquote: ({node, ...props}) => {
                 void node;
@@ -413,7 +422,7 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
       </div>
 
       <div style={CARD_STYLES.footerDivider(isDark)}>
-        <p className="whitespace-nowrap" style={CARD_STYLES.footer}>主講人 / 福嶋晴菜</p>
+        <p className="whitespace-nowrap" style={CARD_STYLES.footer}>「はるまとぺーじ」第 {episode.episodeNumber} 回</p>
       </div>
     </div>
   );
