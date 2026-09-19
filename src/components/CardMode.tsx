@@ -392,7 +392,8 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
               },
               strong: ({node, ...props}) => {
                 void node;
-                return <strong style={{ color: isDark ? '#4ade80' : '#9333ea', fontWeight: 900 }} {...props} />;
+                // 標題已有顏色區分，900 在手機上太粗；用 500（layout.tsx 有載 Noto Sans TC 500）
+                return <strong style={{ color: isDark ? '#4ade80' : '#9333ea', fontWeight: 500 }} {...props} />;
               },
               ul: ({node, ...props}) => {
                 void node;
