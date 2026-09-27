@@ -7,4 +7,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # 動手前先讀
 
 `docs/agent-workflow.md` — 部署事實、量測與截圖做法、內容改寫的安全程序、不可亂動的地方。
+`docs/episode-workflow.md` — 集數檔（逐字稿、總結、段落、標題）的寫法；常客書籤名在 `docs/GLOSSARY.md`。改完跑 `npm run validate:content -- --strict`。
 版面比較與方案提案一律做成 `docs/demos/demo_xxx.html`，不要寫成 Markdown 報告。

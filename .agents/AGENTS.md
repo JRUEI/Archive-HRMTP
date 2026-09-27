@@ -14,6 +14,7 @@
 
 ## 3. 網站維護邊界
 * **不可隨意覆蓋**：更新 `content/episodes/` 內的 Markdown 廣播紀錄時，若檔案已存在，AI 必須先使用 `view_file` 讀取內容，並徵求使用者同意是否覆寫。
+* **集數格式**：集數檔的格式與用語照 `docs/episode-workflow.md`，常客書籤名照 `docs/GLOSSARY.md`；不同模型接手也照同一份，不自創譯法。
 * **設計系統鎖定**：本站的核心主色為「紫羅蘭色 (`#B39DDB`)」與「青蘋果綠 (`#B2FF59`)」，非經使用者明確指示，AI 不得擅自修改 `globals.css` 內的品牌色系設定。
 
 ## 4. 展現形式的絕對原則 (HTML Demo vs Markdown)

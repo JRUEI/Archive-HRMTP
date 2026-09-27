@@ -88,7 +88,8 @@ export function getEpisodeData(id: string): EpisodeData | null {
   const cardSections = cardsText.split('### ').map(s => s.trim()).filter(Boolean);
   const cards: EpisodeCard[] = cardSections.map(section => {
     const lines = section.split('\n');
-    const headerLine = lines[0].trim();
+    // 開頭的 [mm:ss] 是這一段在逐字稿裡開始的位置，只給檢查用，卡片不顯示
+    const headerLine = lines[0].trim().replace(/^\[\d{2}:\d{2}(?::\d{2})?\]\s*/, '');
     // Parse tag and title from "一般話題 1人的廣播，不一樣的節奏"
     // Assuming format is "[Tag] Title" separated by space
     const firstSpaceIndex = headerLine.indexOf(' ');
