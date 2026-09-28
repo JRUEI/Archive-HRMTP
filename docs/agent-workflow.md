@@ -34,22 +34,35 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 5. `Page.getLayoutMetrics` 取 `cssContentSize.height`
 6. `Page.captureScreenshot { captureBeyondViewport: true, clip: {...} }`
 
-範本在 scratchpad 的 `shoot.mjs`（純截圖）與 `pillmeasure.mjs`（`getBoundingClientRect` 量測）。
+CDP 的寫法照抄 `scripts/card-probe.mjs`（開分頁、等 `loadEventFired`、把函式丟進頁面執行）。
+scratchpad 的檔案不會留到下個 session（以前的範本都已不在），要留下來的腳本放 `scripts/`。
 
 量測注意：
 
 - `innerWidth / 2 = 640` 是假中線，含捲軸。1280 視窗下內容欄真正的中線是 **633**。
 - 先講數字再動手。改版面前後都量，兩組數字一起報。
 
-圖卡（`CardMode.tsx`）改了字級、內文框寬或頁尾，要重量溢出。範本是 scratchpad 的 `fontprobe.mjs`：
-逐集切到圖卡，量隱藏匯出容器裡每一張 1080×1920 原尺寸卡。
+圖卡（`CardMode.tsx`）改了字級、內文框寬、頁尾或折行估算，要重量。開好 headless Chrome 與 `npm run dev` 後：
+
+```bash
+node scripts/card-probe.mjs [輸出.json] [1-12]   # 每集一行：內容卡張數、被切開的段落、溢出、餘裕
+```
+
+它逐集切到「圖卡 → 段落紀錄」與「精簡總結」，量隱藏匯出容器裡每張 1080×1920 原尺寸卡，有溢出就 exit 1。
 
 - 內容卡：每張 `.export-card` 的 `scrollHeight - clientHeight` 要是 0。
 - 精簡總結：看 `z-index: 10` 內層的餘裕 `clientHeight - 160 - offsetHeight`，要 ≥ 0。
   左下裝飾圓（`bottom: -10%`）會撐大 `scrollHeight`，不能拿來判斷。
-- 分頁不量 DOM，只靠 `lineCount` 估算。每行字數用 `floor(欄寬 / 字級) - 0.5`。
-  標點不能放行首，會把前一字擠到下一行。若只用 `欄寬 / 字級`，36～44px 每種字級都會低估 10～20 段。
-  實測 `floor - 0.5` 沒有低估，是不低估的公式裡多估最少的。
+- dev server 的網址要有結尾 `/`（`/episodes/ep12/`），少了會 308。
+- 分頁不量 DOM，靠 `lineCount` 逐字模擬折行：全形字 1 字寬；`，。」）…` 等不放行首、`「（《` 等不放行尾；
+  英數字連成一段不拆、`——` 不拆；行尾空白不佔寬。英數字寬度取 iPhone（SF Pro）與 Noto Sans TC 中偏寬的值。
+- 2026-09 實測：12 回 1,354 個條目 0 低估；字級從 1.0 縮到 0.7（精簡總結到 0.6）重排 32,003 次也是 0 低估。
+  舊公式 `ceil(字寬 / (floor(欄寬 / 字級) - 0.5))` 縮字級時會低估 10 段（會被裁字），
+  又會把剛好排滿的段落多估一行，6 個段落因此被多切一張（內容卡 329 → 323）。
+- 還會多估的只有含英數字的條目（故意估寬），以及 `SAFETY = 24`：常見的「4 條各 3 行 + 1 行引用」實際 1,189px，
+  1 行標題的預算是 1,172.6px，所以會切成兩張。
+- Chrome 153 與 Safari 的 `text-autospace` 預設都是 `no-autospace`（中英之間不自動加空隙）。
+  規格預設是 `normal`，哪天瀏覽器跟進，中英交界各多 1/8 字寬，`lineCount` 要跟著加。
 
 ## 3. Demo HTML 規範
 
@@ -73,7 +86,7 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 4. 正規化 diff：把兩邊的目標樣式全部抹平後逐字比對，證明**其餘內容 byte 相同**。
 5. `git diff --stat` 的增刪行數要跟替換次數對得上。
 
-範本：scratchpad 的 `shorten_tc.mjs`（2,068 筆時間碼轉換就是這樣做的）。
+2,068 筆時間碼轉換就是照這個流程做的。
 
 ## 5. 編碼與工具禁忌
 
@@ -100,7 +113,7 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 ```bash
 npm run verify                     # lint + typecheck + build，要零 error、零 warning
 GITHUB_ACTIONS=1 npm run build     # 要能產出 out/
-grep -rl "noindex" out | wc -l     # 頁數要對得上
+grep -rl "noindex" out --include=*.html | wc -l   # 要等於 HTML 頁數（目前 21）；不加 --include 會連 RSC 的 .txt 一起算
 git push
 gh run watch                       # build ✓ 且 deploy ✓
 curl -sI https://jruei.github.io/Archive-HRMTP/
@@ -111,3 +124,5 @@ curl -sI https://jruei.github.io/Archive-HRMTP/
 - ep04 的五列 `[工作人員]`（38:15、38:39、43:32、43:40、44:08）是照上下文判斷，字幕沒有說話者。
 - 字幕聽不出來、別回也對不上的名字寫成「……」：ep05 35:39、37:56、38:56（冰淇淋撲克的牌），ep09 09:40（字幕「しおりば葉さん」）、10:05（劇本作者，字幕「おさん」），ep10 24:01（字幕「しさん」）、24:07 與 24:15（信裡對福嶋的稱呼，字幕「徳さん」「ゆこちゃんさん」，可能是福ちゃんさん），ep12 23:38（字幕只剩「ネームさん」）。查法：`Select-String -Path content\episodes\*.md -Pattern '……' -Encoding utf8`。
 - たけのこの山是判斷：字幕 9 次聽成たのこの山，但慢慢唸的幾次都是たけのこの山。
+- 圖卡的 `var(--font-serif)`（標題、引用、大數字）沒有作用：`--font-serif` 寫在 globals.css 的 `@theme inline` 裡，
+  實測 `:root` 上沒有這個變數，實際畫出來是無襯線字。要不要改成真的宋體由使用者決定；改了英數字寬度會變，要重量。

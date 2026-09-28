@@ -105,10 +105,21 @@ const UL_MARGIN = 32;
 const Q_MARGIN = 28 * 2 + 24 * 2;       // 引用上下內距 + 上下 margin
 const Q_INSET = 6 + 36 * 2;             // 引用左框線 + 左右內距
 
-// 全形字寬算 1，半形（ASCII 與半形假名）算 0.55
-function widthInChars(text: string): number {
+// 不能放行首的字（標點禁則），放不下時連前一字一起換行。小假名與長音各瀏覽器規則不一，一律當成不能放行首
+const NO_START = /[，。、：；！？」』）》〉】…‥・ー～〜ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/u;
+// 不能放行尾的字，後一字要跟著它
+const NO_END = /[「『（《〈【]/u;
+
+// 半形字寬（em）。英數字在 iPhone 走 SF Pro、其他平台走 Noto Sans TC，取偏寬的值
+function asciiWidth(text: string): number {
   let w = 0;
-  for (const ch of text) w += /[ -ÿ｡-ﾟ]/.test(ch) ? 0.55 : 1;
+  for (const ch of text) {
+    if (ch === ' ') w += 0.3;
+    else if (/[ijlftrI.,:;'!|()[\]/-]/.test(ch)) w += 0.42;
+    else if (/[MWmw%@]/.test(ch)) w += 1;
+    else if (/[A-Z]/.test(ch)) w += 0.75;
+    else w += 0.62;
+  }
   return w;
 }
 
@@ -117,10 +128,29 @@ function stripMarks(text: string): string {
   return text.replace(/^QUOTE:/, '').replace(/^>\s*/, '').replace(/^\*\s+/, '').replace(/\*\*/g, '');
 }
 
-// 一行只排得下整數個字；標點不能放行首（禁則）時會把前一字擠到下一行，
-// 實測 36～44px 平均每行再扣半字才不會低估（見 docs/agent-workflow.md）
+// 逐字模擬折行：全形字 1 字寬，英數字與「——」整段不拆，禁則字黏在前一段，放不下就整段換行。
+// 用平均值（每行字數 − 0.5）會把剛好排滿的段落多估一行，整張卡被切成兩張（見 docs/agent-workflow.md）
 function lineCount(text: string, colWidth: number, fontSize: number): number {
-  return Math.max(1, Math.ceil(widthInChars(text) / (Math.floor(colWidth / fontSize) - 0.5)));
+  const max = colWidth / fontSize + 1e-6;
+  const segs: { w: number; space: boolean }[] = [];
+  let glueNext = false;
+  for (const [s] of text.matchAll(/ +|[!-~]+|—+|[\s\S]/gu)) {
+    const space = s[0] === ' ';
+    const w = /^[!-~ ]/.test(s) ? asciiWidth(s) : s.length;
+    const prev = segs[segs.length - 1];
+    if (!space && prev && !prev.space && (glueNext || NO_START.test(s[0]))) prev.w += w;
+    else segs.push({ w, space });
+    glueNext = NO_END.test(s[s.length - 1]);
+  }
+  let lines = 1;
+  let used = 0;
+  for (const { w, space } of segs) {
+    if (space) { used = Math.min(max, used + w); continue; } // 行尾空白懸在行外，不會擠出新行
+    if (used > 0 && used + w > max) { lines++; used = 0; }
+    used += w;
+    while (used > max) { lines++; used -= max; } // 比整行還寬的一段（超長英文字）只能硬切
+  }
+  return lines;
 }
 
 // 單一條目在卡片上實際佔掉的高度（內文框是 flex column，margin 不會合併，直接相加）
