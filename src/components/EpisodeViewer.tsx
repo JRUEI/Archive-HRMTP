@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { EpisodeData } from '@/lib/markdown';
 import dynamic from 'next/dynamic';
 import TextMode from './TextMode';
+import ClipsMode from './ClipsMode';
 
 const CardMode = dynamic(() => import('./CardMode'), { 
   ssr: false, 
@@ -14,7 +15,7 @@ import { LayoutGrid, AlignLeft, Crosshair } from 'lucide-react';
 import TranscriptMode from './TranscriptMode';
 
 export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
-  const [viewType, setViewType] = useState<'summary' | 'lossless' | 'transcript'>('summary');
+  const [viewType, setViewType] = useState<'summary' | 'lossless' | 'clips' | 'transcript'>('summary');
   const [isCardMode, setIsCardMode] = useState(false);
 
   // 畫面視角定位：底部對齊字幕群底下空白的中間，剛好露出上方影片時間軸（免手動滑動滾輪）
@@ -118,28 +119,36 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
         )}
 
         {/* Control Panel */}
-        <div className="flex-[1.7] relative z-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:px-5 flex flex-col sm:flex-row justify-between items-center gap-2 lg:gap-3 shadow-sm overflow-x-auto">
+        <div className="flex-1 lg:flex-none relative z-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:px-5 flex flex-col sm:flex-row justify-between items-center gap-2 lg:gap-3 shadow-sm overflow-x-auto">
           
           {/* Content Toggle */}
           <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-xl shrink-0 min-w-min">
             <button
               onClick={() => setViewType('summary')}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'summary' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'summary' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
             >
               精簡總結
             </button>
             <button
               onClick={() => setViewType('lossless')}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'lossless' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'lossless' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
             >
               段落紀錄
             </button>
+            {episode.clips.length > 0 && (
+              <button
+                onClick={() => setViewType('clips')}
+                className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'clips' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              >
+                精華
+              </button>
+            )}
             <button
               onClick={() => {
                 setViewType('transcript');
                 setTimeout(scrollToPlayerStage, 100);
               }}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'transcript' ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'transcript' ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
             >
               逐字稿
             </button>
@@ -160,14 +169,14 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
             <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-xl shrink-0 min-w-min">
               <button
                 onClick={() => setIsCardMode(true)}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-bold transition-all text-sm border ${isCardMode ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${isCardMode ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               >
                 <LayoutGrid size={18} strokeWidth={2.5} className="shrink-0" />
                 <span className="whitespace-nowrap">圖卡</span>
               </button>
               <button
                 onClick={() => setIsCardMode(false)}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-bold transition-all text-sm border ${!isCardMode ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${!isCardMode ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               >
                 <AlignLeft size={18} strokeWidth={2.5} className="shrink-0" />
                 <span className="whitespace-nowrap">文字</span>
@@ -182,7 +191,9 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
         {viewType === 'transcript' ? (
           <TranscriptMode episode={episode} />
         ) : isCardMode ? (
-          <CardMode key={viewType} episode={episode} isLossless={viewType === 'lossless'} />
+          <CardMode key={viewType} episode={episode} view={viewType} />
+        ) : viewType === 'clips' ? (
+          <ClipsMode episode={episode} />
         ) : (
           <TextMode episode={episode} isLossless={viewType === 'lossless'} />
         )}

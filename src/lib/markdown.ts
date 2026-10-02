@@ -20,6 +20,14 @@ export interface TranscriptLine {
   text: string;
 }
 
+// 精華片段：起訖是逐字稿的列（迄＝下一列開始的時間），對話照時段從逐字稿切，不另外寫
+export interface EpisodeClip {
+  start: string;
+  end: string;
+  title: string;
+  quote: string;
+}
+
 export interface EpisodeData {
   id: string;
   title: string;
@@ -27,6 +35,7 @@ export interface EpisodeData {
   episodeNumber: number;
   summary: EpisodeSummary;
   cards: EpisodeCard[];
+  clips: EpisodeClip[];
   transcript?: TranscriptLine[];
   youtubeUrl?: string;
   guest?: string;
@@ -107,22 +116,15 @@ export function getEpisodeData(id: string): EpisodeData | null {
       title = headerLine.substring(firstSpaceIndex + 1).trim();
     }
 
-    const bodyContent: string[] = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      if (line.startsWith('>')) {
-        const quoteText = line.replace(/^>\s*/, '').replace(/^「/, '').replace(/」$/, '').trim();
-        bodyContent.push(`QUOTE:${quoteText}`);
-      } else {
-        bodyContent.push(line);
-      }
-    }
+    const bodyContent = lines.slice(1).map(line => line.trim()).filter(Boolean);
 
     return { tag, title, content: bodyContent };
   });
+
+  // 精華片段：### [mm:ss–mm:ss] 標題，下一行 > 精華句
+  const clipsText = content.match(/##\s*【精華片段】([\s\S]*?)(?=\n##\s*【|$)/)?.[1] ?? '';
+  const clips: EpisodeClip[] = [...clipsText.matchAll(/^###\s*\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\s*(.+?)\s*\n\s*>\s*(.+?)\s*$/gm)]
+    .map(([, start, end, title, quote]) => ({ start, end, title, quote }));
 
   // Extract Transcript
   const transcriptMatch = content.match(/##\s*【完整逐字稿】([\s\S]*)$/);
@@ -157,6 +159,7 @@ export function getEpisodeData(id: string): EpisodeData | null {
     episodeNumber: matterResult.data.episode || parseInt(id.replace('ep', '')),
     summary,
     cards,
+    clips,
     transcript,
     youtubeUrl: matterResult.data.youtube || undefined,
     guest: matterResult.data.guest || undefined

@@ -14,7 +14,7 @@
   `jruei.github.io/robots.txt`，那個路徑屬於別的 repo，我們寫不到。有效機制是
   `src/app/layout.tsx` 的 `metadata.robots`，它會產出 `<meta name="robots">` 與 `googlebot`。
 - `public/` 底下的靜態 HTML **不經過 Next 的 metadata**，noindex 要自己寫進 `<head>`。
-  目前只有 `public/shorts-catalog.html` 會進 CI；`/public/*_demo.html` 被 `.gitignore` 擋掉。
+  目前沒有這種檔會進 CI；`/public/*_demo.html` 被 `.gitignore` 擋掉。
 
 ## 2. 量測與截圖
 
@@ -117,7 +117,7 @@ node scripts/card-probe.mjs [輸出.json] [1-12]   # 每集一行：內容卡張
 ```bash
 npm run verify                     # lint + typecheck + build，要零 error、零 warning
 GITHUB_ACTIONS=1 npm run build     # 要能產出 out/
-grep -rl "noindex" out --include=*.html | wc -l   # 要等於 HTML 頁數（目前 21）；不加 --include 會連 RSC 的 .txt 一起算
+grep -rl "noindex" out --include=*.html | wc -l   # 要等於 HTML 頁數（目前 20）；不加 --include 會連 RSC 的 .txt 一起算
 git push
 gh run watch                       # build ✓ 且 deploy ✓
 curl -sI https://jruei.github.io/Archive-HRMTP/

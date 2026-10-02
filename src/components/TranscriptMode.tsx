@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
+import { extractYouTubeId } from '@/lib/clips';
 import { Search, X, FileText, Crosshair, Clock, ArrowLeftRight } from 'lucide-react';
 import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons, MarkMenu } from './SpeakerMarks';
 
@@ -71,13 +72,6 @@ function formatSeconds(sec: number): string {
   const mins = Math.floor(sec / 60);
   const secs = Math.floor(sec % 60);
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
-// 從 YouTube URL 提取 videoId
-function extractYouTubeId(url?: string): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|(?:embed|v)\/))([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
 }
 
 export default function TranscriptMode({ episode }: { episode: EpisodeData }) {

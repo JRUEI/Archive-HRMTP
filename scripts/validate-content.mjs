@@ -16,6 +16,11 @@ const sectionTags = new Set([
 ]);
 // 比對引文時不看空白和 [笑聲] 這類聲音標記
 const normalizeQuote = (text) => text.replace(/\[[^\]]*\]/g, "").replace(/\s+/g, "");
+// 精華片段的第一列用這些字起頭，多半是在接上一句（「對」什麼？「而且」什麼？），開場要往前找
+const leansBack = (text) =>
+  /^(?:[啊欸嗯哎呀喔]+[，、！]?)?(對|是的|是啊|原來|而且|所以|還有|不過|但是|可是|就是|然後|那種|確實|也是)/.test(
+    text.replace(/\[[^\]]*\]/g, "").trim(),
+  );
 // 字數不算空白
 const textLength = (text) => text.replace(/\s/g, "").length;
 // 字幕的 [笑い]、[泣き声]…轉成這些；[音楽] 是自動字幕的背景音樂偵測，不寫
@@ -66,7 +71,7 @@ function validateEpisode(fileName) {
     report(errors, relativePath, `episode 應為 ${expectedEpisode}`);
   }
 
-  for (const section of ["精簡總結", "無損還原", "完整逐字稿"]) {
+  for (const section of ["精簡總結", "無損還原", "精華片段", "完整逐字稿"]) {
     if (!new RegExp(`^##\\s*【${section}】\\s*$`, "m").test(parsed.content)) {
       report(errors, relativePath, `缺少 ## 【${section}】`);
     }
@@ -78,7 +83,12 @@ function validateEpisode(fileName) {
   const summaryHeading = findHeading("精簡總結");
   const losslessHeading = findHeading("無損還原");
   const transcriptHeading = findHeading("完整逐字稿");
+  const clipsHeading = findHeading("精華片段");
   if (transcriptHeading === -1) return 0;
+  if (clipsHeading !== -1 && (clipsHeading < losslessHeading || clipsHeading > transcriptHeading)) {
+    report(errors, relativePath, "## 【精華片段】要放在 ## 【無損還原】和 ## 【完整逐字稿】之間");
+  }
+  const losslessEnd = clipsHeading > losslessHeading && clipsHeading < transcriptHeading ? clipsHeading : transcriptHeading;
 
   if (summaryHeading !== -1 && losslessHeading > summaryHeading) {
     const points = lines
@@ -100,7 +110,7 @@ function validateEpisode(fileName) {
   // 段落標題寫成 ### [mm:ss] [標籤] 標題，時間碼是這一段在逐字稿裡開始的那一列（切段規則見 docs/episode-workflow.md）
   const sectionStarts = [];
   const sections = [];
-  for (let index = losslessHeading + 1; losslessHeading !== -1 && index < transcriptHeading; index += 1) {
+  for (let index = losslessHeading + 1; losslessHeading !== -1 && index < losslessEnd; index += 1) {
     const line = lines[index].trim();
     const section = sections.at(-1);
     if (section && /^[*-]\s/.test(line)) {
@@ -112,10 +122,12 @@ function validateEpisode(fileName) {
         report(errors, relativePath, `小標「${label}」有 ${textLength(label)} 字，應為 2～8 字`);
       }
     }
-    if (section && line.startsWith(">")) section.quotes += 1;
+    if (line.startsWith(">")) {
+      report(errors, relativePath, `段落「${section?.heading ?? ""}」不放 > 引言（精華句寫在 【精華片段】）`);
+    }
     if (!/^###\s/.test(line)) continue;
     const heading = line.replace(/^###\s*/, "").trim();
-    sections.push({ heading, bullets: 0, quotes: 0 });
+    sections.push({ heading, bullets: 0 });
     const match = /^\[(\d{2}:\d{2})\]\s*\[([^\]]+)\]\s*\S/.exec(heading);
     const seconds = match && timestampToSeconds(match[1]);
     if (!match || seconds === null) {
@@ -131,13 +143,31 @@ function validateEpisode(fileName) {
       sectionStarts.push({ heading, seconds, tag: match[2] });
     }
   }
-  for (const { heading, bullets, quotes } of sections) {
+  for (const { heading, bullets } of sections) {
     if (bullets < 3 || bullets > 5) {
       report(errors, relativePath, `段落「${heading}」有 ${bullets} 點條列，應為 3～5 點`);
     }
-    if (quotes > 1) {
-      report(errors, relativePath, `段落「${heading}」有 ${quotes} 則引言，最多 1 則`);
+  }
+
+  // 精華片段寫成 ### [mm:ss–mm:ss] 標題，下一行 > 精華句（規則見 docs/episode-workflow.md）
+  const clips = [];
+  for (let index = clipsHeading + 1; clipsHeading !== -1 && index < transcriptHeading; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    const clip = clips.at(-1);
+    if (line.startsWith(">") && clip && !clip.quote) {
+      clip.quote = line.replace(/^>\s*/, "");
+      continue;
     }
+    const match = /^###\s*\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\s*(\S.*)$/.exec(line);
+    if (!match) {
+      report(errors, relativePath, `精華片段「${line}」要寫成 ### [mm:ss–mm:ss] 標題，下一行 > 精華句`);
+      continue;
+    }
+    clips.push({ heading: line.replace(/^###\s*/, ""), start: timestampToSeconds(match[1]), end: timestampToSeconds(match[2]), quote: "" });
+  }
+  if (clipsHeading !== -1 && (clips.length < 3 || clips.length > 5)) {
+    report(errors, relativePath, `精華片段有 ${clips.length} 段，應為 3～5 段`);
   }
 
   // 「」裡和 > 引言的字要能在逐字稿某一列裡原文找到
@@ -164,6 +194,7 @@ function validateEpisode(fileName) {
   const seen = new Set();
   const lineSeconds = new Set();
   const rowTexts = [];
+  const rows = [];
   const unknownSpeakers = new Set();
   const unknownMarkers = new Set();
   const longLines = [];
@@ -214,6 +245,7 @@ function validateEpisode(fileName) {
     if (speaker === "福嶋晴菜") hasHost = true;
     if (!speakers.has(speaker)) unknownSpeakers.add(speaker);
     rowTexts.push(normalizeQuote(text));
+    if (seconds !== null) rows.push({ seconds, text });
     for (const marker of text.match(/\[[^\]]*\]/g) || []) {
       if (!soundMarkers.has(marker)) unknownMarkers.add(marker);
     }
@@ -282,6 +314,30 @@ function validateEpisode(fileName) {
     const next = sectionStarts[index + 1];
     if (next && next.seconds - seconds < 60 && tag !== "開場" && tag !== "結尾") {
       report(warnings, relativePath, `段落「${heading}」只有 ${next.seconds - seconds} 秒`);
+    }
+  });
+
+  clips.forEach(({ heading, start, end, quote }, index) => {
+    if (start === null || end === null || !lineSeconds.has(start) || !lineSeconds.has(end)) {
+      report(errors, relativePath, `精華片段「${heading}」的起訖要是逐字稿列的時間碼（迄＝下一列開始的時間）`);
+      return;
+    }
+    const previous = clips[index - 1];
+    if (previous && previous.end !== null && start < previous.end) {
+      report(errors, relativePath, `精華片段「${heading}」跟上一段重疊或順序不對`);
+    }
+    const range = rows.filter((row) => row.seconds >= start && row.seconds < end);
+    if (!range.length) return;
+    if (!quote) {
+      report(errors, relativePath, `精華片段「${heading}」下一行要寫 > 精華句`);
+    } else if (!range.some((row) => normalizeQuote(row.text).includes(normalizeQuote(quote)))) {
+      report(errors, relativePath, `精華片段「${heading}」的精華句不在這段時間的逐字稿裡`);
+    }
+    if (leansBack(range[0].text)) {
+      report(errors, relativePath, `精華片段「${heading}」第一列在接上一句，開場往前找：${range[0].text}`);
+    }
+    if (!/[。！]$/.test(range.at(-1).text.replace(/\[[^\]]*\]/g, "").trim())) {
+      report(errors, relativePath, `精華片段「${heading}」最後一列沒收在句號或驚嘆號：${range.at(-1).text}`);
     }
   });
 

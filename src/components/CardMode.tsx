@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { EpisodeData, EpisodeCard } from '@/lib/markdown';
+import { EpisodeData, EpisodeCard, EpisodeClip } from '@/lib/markdown';
+import { HOST, ClipLine, clipLines, clipLength, shortName } from '@/lib/clips';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +26,11 @@ interface RenderableCard {
   contentChunk?: string[];
   displayTitle?: string;
   scale?: number;
+  // 精華卡：對話段落、第一張的起訖與長度、卡片編號（精華沒有封面封底，編號從 1 起）
+  segs?: ClipLine[];
+  meta?: string;
+  no?: number;
+  total?: number;
 }
 
 interface ExportableCardProps {
@@ -47,16 +53,6 @@ const CARD_STYLES = {
   // Cover
   coverGoldBar: { width: '56px', height: '4px', background: '#E8C97A', marginTop: '60px', marginBottom: '24px' },
   coverBadge: { background: 'rgba(232,201,122,0.12)', border: '1px solid rgba(232,201,122,0.3)', color: '#E8C97A', padding: '10px 22px', borderRadius: '6px', fontSize: '26px', fontWeight: 700 as const, letterSpacing: '0.05em' },
-  // Quote block
-  quoteBlock: (isDark: boolean) => ({
-    background: isDark ? '#333' : '#F3F4F6',
-    borderLeft: `6px solid ${isDark ? '#c084fc' : '#9333ea'}`,
-    padding: '28px 36px', borderRadius: '0 12px 12px 0', margin: '24px 0',
-  }),
-  quoteText: (isDark: boolean, scale = 1) => ({
-    fontFamily: 'var(--font-serif)', fontSize: `${Q_FS * scale}px`, fontWeight: 700 as const,
-    color: isDark ? '#eee' : '#444', lineHeight: Q_LH, margin: 0,
-  }),
   // Content card
   contentBody: (isDark: boolean) => ({
     background: isDark ? '#262626' : '#FFFFFF', borderRadius: '16px', padding: '48px 56px',
@@ -95,15 +91,12 @@ const FOOTER_BLOCK = 78;                // 頁尾框線 + paddingTop + 30px 字
 const SAFETY = 24;                      // 安全邊界，估算誤差的緩衝
 
 const P_FS = 42, P_LH = 1.8;            // 段落與條列
-const Q_FS = 40, Q_LH = 1.65;           // 引用
 const P_MARGIN = 28;                    // 段落 marginBottom
 // 連續的 * 會被 markdown 併成同一個 loose list，每個 li 內層再包一層 <p>。
 // 實測 li 高 = 行數 × 行高，條目間距是 28（內層 p 的 28 與 li 的 16 合併取大），
 // ul 自己的 32px marginBottom 整串只算一次（見 bodyBudget 的 UL_MARGIN）。
 const LI_MARGIN = 28;
 const UL_MARGIN = 32;
-const Q_MARGIN = 28 * 2 + 24 * 2;       // 引用上下內距 + 上下 margin
-const Q_INSET = 6 + 36 * 2;             // 引用左框線 + 左右內距
 
 // 不能放行首的字（標點禁則），放不下時連前一字一起換行。小假名與長音各瀏覽器規則不一，一律當成不能放行首
 const NO_START = /[，。、：；！？」』）》〉】…‥・ー～〜ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/u;
@@ -125,7 +118,7 @@ function asciiWidth(text: string): number {
 
 // 估算前先剝掉 markdown 記號，只算畫面上看得見的字
 function stripMarks(text: string): string {
-  return text.replace(/^QUOTE:/, '').replace(/^>\s*/, '').replace(/^\*\s+/, '').replace(/\*\*/g, '');
+  return text.replace(/^\*\s+/, '').replace(/\*\*/g, '');
 }
 
 // 逐字模擬折行：全形字 1 字寬，英數字與「——」整段不拆，禁則字黏在前一段，放不下就整段換行。
@@ -156,11 +149,6 @@ function lineCount(text: string, colWidth: number, fontSize: number): number {
 // 單一條目在卡片上實際佔掉的高度（內文框是 flex column，margin 不會合併，直接相加）
 function blockHeight(item: string, scale = 1): number {
   const text = stripMarks(item);
-  if (item.startsWith('QUOTE:') || item.startsWith('>')) {
-    const fs = Q_FS * scale;
-    // 渲染時會補上「」
-    return lineCount(`「${text}」`, BODY_W - Q_INSET, fs) * fs * Q_LH + Q_MARGIN;
-  }
   const fs = P_FS * scale;
   if (item.startsWith('* ')) {
     return lineCount(text, BODY_W, fs) * fs * P_LH + LI_MARGIN;
@@ -195,17 +183,90 @@ function packChunks(items: string[], budget: number): string[][] {
 
 // 貪婪切會把內容全塞進前幾張、最後一張只剩一兩條留一大片白。
 // 先用完整預算貪婪切一次得到張數 k，再二分搜「還能維持 k 張的最小高度上限」，用那個上限重切。
-function evenChunks(items: string[], budget: number): string[][] {
-  const k = packChunks(items, budget).length;
-  if (k <= 1) return packChunks(items, budget);
-  let lo = Math.max(...items.map(i => blockHeight(i)));
+function evenPack<T>(pack: (cap: number) => T[][], budget: number, floor: number): T[][] {
+  const k = pack(budget).length;
+  if (k <= 1) return pack(budget);
+  let lo = floor;
   let hi = budget;
   while (hi - lo > 1) {
     const mid = (lo + hi) / 2;
-    if (packChunks(items, mid).length <= k) hi = mid;
+    if (pack(mid).length <= k) hi = mid;
     else lo = mid;
   }
-  return packChunks(items, hi);
+  return pack(hi);
+}
+
+function evenChunks(items: string[], budget: number): string[][] {
+  return evenPack(cap => packChunks(items, cap), budget, Math.max(...items.map(i => blockHeight(i))));
+}
+
+// 「(1/9)」這種分頁後綴會讓標題多一行，預算得照切開後的標題算，所以反覆到張數收斂
+function settle<T>(title: string, split: (budget: number) => T[][]) {
+  let chunks = split(bodyBudget(title));
+  for (let pass = 0; pass < 3; pass++) {
+    const suffix = chunks.length > 1 ? ` (${chunks.length}/${chunks.length})` : '';
+    const next = split(bodyBudget(title + suffix));
+    const settled = next.length === chunks.length;
+    chunks = next;
+    if (settled) break;
+  }
+  const suffix = chunks.length > 1 ? ` (${chunks.length}/${chunks.length})` : '';
+  return { chunks, budget: bodyBudget(title + suffix) };
+}
+
+// --- 精華卡 ---
+// 對話 36px、精華句 40px 粗體加左色條；名字是行內 28px 加 16px 間距，估算時換成等寬的全形空白
+const C_FS = 36, C_LH = 1.7, C_MARGIN = 20;
+const CQ_FS = 40, CQ_LH = 1.65, CQ_MARGIN = 6 + 28, CQ_INSET = 6 + 24;
+const META_H = 28 * 1.5 + 30;
+const NAME_FS = 28, NAME_GAP = 16;
+
+function segHeight(seg: ClipLine): number {
+  const fs = seg.isQuote ? CQ_FS : C_FS;
+  const name = '　'.repeat(Math.ceil((shortName(seg.speaker).length * NAME_FS + NAME_GAP) / fs));
+  // [笑聲] 這類標記排成 0.85em，實寬約 2.4 字；照原字算會多估一行、整段被擠到下一張
+  const text = name + seg.text.replace(/\[([^\]]*)\]/g, '$1.');
+  return seg.isQuote
+    ? lineCount(text, BODY_W - CQ_INSET, fs) * fs * CQ_LH + CQ_MARGIN
+    : lineCount(text, BODY_W, fs) * fs * C_LH + C_MARGIN;
+}
+
+// 一列一列往下排，同一人連續的列在同一張卡上併成一段；
+// 個人回整段都是主持人，先併好再分頁的話一段就超過一張卡
+function packClip(lines: ClipLine[], cap: number): ClipLine[][] {
+  const pages: ClipLine[][] = [[]];
+  let used = META_H;
+  for (const line of lines) {
+    let page = pages[pages.length - 1];
+    const last = page[page.length - 1];
+    const merge = last && !last.isQuote && !line.isQuote && last.speaker === line.speaker;
+    const seg = merge ? { ...last, text: last.text + line.text } : { ...line };
+    const h = merge ? segHeight(seg) - segHeight(last) : segHeight(seg);
+    if (page.length && used + h > cap) {
+      pages.push(page = [{ ...line }]);
+      used = segHeight(line);
+      continue;
+    }
+    if (merge) page[page.length - 1] = seg;
+    else page.push(seg);
+    used += h;
+  }
+  return pages;
+}
+
+function paginateClips(clips: EpisodeClip[], episode: EpisodeData): RenderableCard[] {
+  const cards: RenderableCard[] = [];
+  for (const clip of clips) {
+    const lines = clipLines(clip, episode.transcript);
+    const { chunks } = settle(clip.title, budget =>
+      evenPack(cap => packClip(lines, cap), budget, Math.max(...lines.map(segHeight)) + META_H));
+    chunks.forEach((segs, i) => cards.push({
+      type: 'content', tag: '精華', segs,
+      meta: i === 0 ? `${clip.start}–${clip.end}　${clipLength(clip)}` : undefined,
+      displayTitle: chunks.length > 1 ? `${clip.title} (${i + 1}/${chunks.length})` : clip.title,
+    }));
+  }
+  return cards.map((card, i) => ({ ...card, no: i + 1, total: cards.length }));
 }
 
 // 字級每次縮 1%，縮到估算高度放得進預算為止。不能用平方根一次算：
@@ -240,17 +301,7 @@ function paginateCards(cards: EpisodeCard[]) {
   const paginated: PaginatedCard[] = [];
 
   cards.forEach(card => {
-    // 「(1/9)」這種分頁後綴會讓標題多一行，預算得照切開後的標題算，所以反覆到張數收斂
-    let chunks = evenChunks(card.content, bodyBudget(card.title));
-    for (let pass = 0; pass < 3; pass++) {
-      const suffix = chunks.length > 1 ? ` (${chunks.length}/${chunks.length})` : '';
-      const next = evenChunks(card.content, bodyBudget(card.title + suffix));
-      const settled = next.length === chunks.length;
-      chunks = next;
-      if (settled) break;
-    }
-    const suffix = chunks.length > 1 ? ` (${chunks.length}/${chunks.length})` : '';
-    const budget = bodyBudget(card.title + suffix);
+    const { chunks, budget } = settle(card.title, b => evenChunks(card.content, b));
     chunks.forEach(chunk => {
       paginated.push({ ...card, contentChunk: chunk, displayTitle: '', scale: chunkScale(chunk, budget) });
     });
@@ -373,8 +424,8 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
   const titleColor = isDark ? '#FFFFFF' : '#111111';
   const textColor = isDark ? '#DDDDDD' : '#333333';
   
-  const contentIndex = index;
-  const totalContent = Math.max(1, totalCards - 2);
+  const contentIndex = card.no ?? index;
+  const totalContent = card.total ?? Math.max(1, totalCards - 2);
   const s = card.scale ?? 1;
 
   return (
@@ -404,20 +455,27 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
         
         <div style={CARD_STYLES.contentBody(isDark)}>
           
+          {card.segs ? (
+            <>
+              {card.meta && <p style={{ fontSize: '28px', lineHeight: 1.5, color: '#aaa', margin: '0 0 30px', letterSpacing: '0.03em' }}>{card.meta}</p>}
+              {card.segs.map((seg, k, segs) => {
+                const color = seg.speaker === HOST ? (isDark ? '#c084fc' : '#9333ea') : (isDark ? '#fbbf24' : '#d97706');
+                // 名字標在每張第一段和換人的地方；個人回只有主持人，不標
+                const showName = (k === 0 || segs[k - 1].speaker !== seg.speaker) && !(!episode.guest && seg.speaker === HOST);
+                const name = showName && <span style={{ fontSize: `${NAME_FS}px`, fontWeight: 700, color, marginRight: `${NAME_GAP}px`, letterSpacing: '0.03em' }}>{shortName(seg.speaker)}</span>;
+                const text = seg.text.split(/(\[[^\]]*\])/).map((part, j) => j % 2
+                  ? <span key={j} style={{ color: isDark ? '#71717a' : '#a1a1aa', fontSize: '0.85em' }}>{part}</span>
+                  : part);
+                return seg.isQuote
+                  ? <p key={k} style={{ fontSize: `${CQ_FS}px`, lineHeight: CQ_LH, color: titleColor, fontWeight: 700, margin: '6px 0 28px', paddingLeft: '24px', borderLeft: `6px solid ${color}` }}>{name}{text}</p>
+                  : <p key={k} style={{ fontSize: `${C_FS}px`, lineHeight: C_LH, color: textColor, margin: `0 0 ${C_MARGIN}px` }}>{name}{text}</p>;
+              })}
+            </>
+          ) : (
           <ReactMarkdown
             components={{
               p: ({node, ...props}) => {
                 void node;
-                if (typeof props.children === 'string' && props.children.startsWith('QUOTE:')) {
-                  const quoteText = props.children.replace('QUOTE:', '');
-                  return (
-                    <div style={CARD_STYLES.quoteBlock(isDark)}>
-                      <p style={CARD_STYLES.quoteText(isDark, s)}>
-                        「{quoteText}」
-                      </p>
-                    </div>
-                  );
-                }
                 return <p style={CARD_STYLES.paragraph(textColor, s)} {...props} />;
               },
               strong: ({node, ...props}) => {
@@ -434,20 +492,11 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
                 void node;
                 return <li style={{ fontSize: `${P_FS * s}px`, color: textColor, lineHeight: P_LH, marginBottom: '16px', listStyleType: 'none' }} {...props} />;
               },
-              blockquote: ({node, ...props}) => {
-                void node;
-                return (
-                  <div style={CARD_STYLES.quoteBlock(isDark)}>
-                    <p style={CARD_STYLES.quoteText(isDark)}>
-                      {props.children}
-                    </p>
-                  </div>
-                );
-              },
             }}
           >
             {card.contentChunk?.join('\n\n') || ''}
           </ReactMarkdown>
+          )}
 
         </div>
       </div>
@@ -459,7 +508,7 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
   );
 };
 
-export default function CardMode({ episode, isLossless }: { episode: EpisodeData, isLossless: boolean }) {
+export default function CardMode({ episode, view }: { episode: EpisodeData, view: 'summary' | 'lossless' | 'clips' }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { theme } = useTheme();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -531,7 +580,9 @@ export default function CardMode({ episode, isLossless }: { episode: EpisodeData
   // Determine cards
   let cardsToRender: RenderableCard[] = [];
   
-  if (!isLossless) {
+  if (view === 'clips') {
+    cardsToRender = paginateClips(episode.clips, episode);
+  } else if (view === 'summary') {
     cardsToRender = [
       { type: 'summary', contentChunk: episode.summary, scale: summaryScale(episode.summary, episode.title) }
     ];

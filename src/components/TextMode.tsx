@@ -44,15 +44,6 @@ function SectionBlock({ card, isFocusMode }: { card: EpisodeCard, isFocusMode: b
       </div>
       <div className="mt-6 space-y-4">
         {card.content.map((line, lineIdx) => {
-          if (line.startsWith('QUOTE:')) {
-            const quoteText = line.replace('QUOTE:', '');
-            return (
-              <blockquote key={lineIdx} className="border-l-4 border-brand-purple bg-brand-purple/5 dark:bg-brand-purple/10 p-4 rounded-r-lg text-zinc-700 dark:text-zinc-300">
-                {quoteText}
-              </blockquote>
-            );
-          }
-          
           const cardMatch = line.match(/^\*\s*\*\*(.*?)\*\*[：:]?\s*(.*)$/);
           if (cardMatch) {
             const title = cardMatch[1];
