@@ -422,7 +422,8 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
             className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 sm:pt-4 shadow-lg flex flex-col gap-2.5"
           >
             <div className={`flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pb-4 border-b${barFlip ? ' sm:flex-row-reverse' : ''} border-zinc-100 dark:border-zinc-800/80`}>
-              <div className="flex flex-wrap items-center gap-2">
+              {/* 對調時這組也反過來，前後跳才會貼在最外側 */}
+              <div className={`flex flex-wrap items-center gap-2${barFlip ? ' sm:flex-row-reverse' : ''}`}>
                 {/* 前後跳：−15 −5 目前時間 +5 +15 */}
                 <div className="inline-flex items-stretch rounded-[10px] border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/40 divide-x divide-emerald-200 dark:divide-emerald-800/50 overflow-hidden">
                   {[-15, -5].map((d) => (
