@@ -165,6 +165,9 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
     }));
   }, [episode.transcript]);
 
+  // 個人回（只有福嶋晴菜與工作人員）：每句都是主持人，人名標籤只留工作人員的
+  const solo = useMemo(() => parsedLines.every(l => l.speaker === '福嶋晴菜' || l.speaker === '工作人員'), [parsedLines]);
+
   // 本機開發時的說話者標記與修正（正式站 enabled 為 false，什麼都不畫）
   const speakerTools = useSpeakerTools(episode.id, parsedLines, activeIndex);
   const shownLines = useMemo(
@@ -471,6 +474,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 flex flex-col">
               {currentGroupLines.map((line) => {
                 const isHost = line.speaker === '福嶋晴菜';
+                const hideName = solo && isHost;
 
                 return (
                   <div
@@ -482,7 +486,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                     {/* 時間戳：固定寬，高度跟人名標籤一樣，兩者中線對齊 */}
                     {showTime && (
                       <span
-                        className={`${TIME_TAG} bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/60 group-hover:bg-emerald-500 group-hover:text-zinc-950 group-hover:border-emerald-400`}
+                        className={`${TIME_TAG} ${hideName ? 'sm:mt-0.5' : ''} bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/60 group-hover:bg-emerald-500 group-hover:text-zinc-950 group-hover:border-emerald-400`}
                         title="點擊跳轉影片至此秒數"
                       >
                         {line.time}
@@ -491,16 +495,18 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
 
                     {/* 對話內文 */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`font-bold text-xs px-2 py-0.5 rounded-full border ${
-                            isHost
-                              ? 'bg-purple-500/10 text-brand-purple border-purple-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                          }`}
-                        >
-                          {line.speaker}
-                        </span>
+                      <div className="flex items-center gap-2 mb-1 empty:hidden">
+                        {!hideName && (
+                          <span
+                            className={`font-bold text-xs px-2 py-0.5 rounded-full border ${
+                              isHost
+                                ? 'bg-purple-500/10 text-brand-purple border-purple-500/20'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                            }`}
+                          >
+                            {line.speaker}
+                          </span>
+                        )}
                         <MarkTags tools={speakerTools} i={line.index} />
                       </div>
                       <p className="text-sm sm:text-base leading-relaxed m-0 text-zinc-900 dark:text-zinc-100 font-medium">
@@ -707,6 +713,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
           {filteredLines.map((line) => {
             const isHost = line.speaker === '福嶋晴菜';
+            const hideName = solo && isHost && !speakerTools.enabled;
             const offset = groupSize >= 2 ? 1 : 0;
             const startGroupIdx = Math.max(0, activeIndex - offset);
             const isActive = activeIndex >= 0 && (line.index >= startGroupIdx && line.index < startGroupIdx + groupSize);
@@ -727,7 +734,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                 {/* 時間戳 */}
                 {showTime && (
                   <span
-                    className={`${TIME_TAG} ${
+                    className={`${TIME_TAG} ${hideName ? 'sm:mt-0.5' : ''} ${
                       isActive
                         ? 'bg-emerald-500 text-white dark:bg-emerald-400 dark:text-zinc-950 border-transparent'
                         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-transparent group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:bg-emerald-400 dark:group-hover:text-zinc-950'
@@ -740,8 +747,8 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
 
                 {/* 對話內文 */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
+                  <div className="flex items-center gap-2 mb-1 empty:hidden">
+                    {!hideName && <span
                       {...(speakerTools.enabled && {
                         role: 'button',
                         title: '點一下換人（本機才有）',
@@ -754,7 +761,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                       } ${speakerTools.enabled ? 'hover:border-dashed hover:border-current' : ''}`}
                     >
                       {line.speaker}
-                    </span>
+                    </span>}
                     <MarkTags tools={speakerTools} i={line.index} />
                   </div>
                   <p className={`text-sm sm:text-base leading-relaxed m-0 transition-colors ${
