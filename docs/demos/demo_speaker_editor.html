@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>說話者調整區</title>
+<style>
+:root{
+  --bg:#f4f4f5; --surface:#ffffff; --surface2:#fafafa; --ink:#18181b; --ink2:#3f3f46; --muted:#71717a; --line:#e4e4e7;
+  --purple:#9333ea; --purple-bg:rgba(168,85,247,.10); --purple-bd:rgba(168,85,247,.25);
+  --amber:#d97706; --amber-bg:rgba(245,158,11,.10); --amber-bd:rgba(245,158,11,.25);
+  --green:#059669; --green-bg:#ecfdf5; --green-bd:#a7f3d0;
+  --sel:#eef2ff; --sel-bd:#818cf8; --edit:#f59e0b; --player:#18181b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09090b; --surface:#18181b; --surface2:#131316; --ink:#fafafa; --ink2:#d4d4d8; --muted:#a1a1aa; --line:#27272a;
+    --purple:#c084fc; --amber:#fbbf24; --green:#34d399; --green-bg:rgba(16,185,129,.12); --green-bd:rgba(52,211,153,.35);
+    --sel:rgba(129,140,248,.14); --sel-bd:#818cf8; --player:#000;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#09090b; --surface:#18181b; --surface2:#131316; --ink:#fafafa; --ink2:#d4d4d8; --muted:#a1a1aa; --line:#27272a;
+  --purple:#c084fc; --amber:#fbbf24; --green:#34d399; --green-bg:rgba(16,185,129,.12); --green-bd:rgba(52,211,153,.35);
+  --sel:rgba(129,140,248,.14); --sel-bd:#818cf8; --player:#000;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:780px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:24px;line-height:1.3;margin:0 0 6px}
+h2{font-size:18px;margin:36px 0 10px}
+p{margin:6px 0}
+.lede{color:var(--muted);margin:0 0 20px}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--surface)}
+
+/* 播放器替身 */
+.player{background:var(--player);color:#e4e4e7;border-radius:16px;height:150px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;margin-bottom:12px}
+.player b{font-family:ui-monospace,Consolas,monospace;font-size:22px;color:#34d399}
+
+/* 抽屜 */
+.drawer{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;height:720px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.dhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.dhead strong{font-size:14px}
+.hright{display:flex;align-items:center;gap:8px}
+.pending{font-size:12px;font-weight:700;color:var(--edit);background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:999px;height:24px;padding:0 10px;cursor:pointer}
+.pending[hidden]{display:none}
+.seg{display:inline-flex;padding:2px;border-radius:10px;background:var(--surface2);border:1px solid var(--line)}
+.seg button{height:28px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.drawer.editing .seg button.ed[aria-pressed="true"]{background:#6366f1;color:#fff}
+.drawer.editing{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+/* 聆聽模式：跟現在的網站一樣，沒有勾選框和調整區 */
+.drawer:not(.editing) .gut,.drawer:not(.editing) .panel{display:none}
+.drawer:not(.editing) .row{padding-left:10px}
+.list{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:2px}
+
+.row{display:flex;align-items:flex-start;gap:10px;padding:10px 10px 10px 6px;border-radius:14px;border:1px solid transparent;cursor:pointer;position:relative}
+.row:hover{background:var(--surface2);border-color:var(--line)}
+.row.active{border-color:var(--green);background:var(--green-bg)}
+.row.sel{background:var(--sel);border-color:var(--sel-bd)}
+.row.edited::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--edit)}
+.gut{flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.gut input{width:16px;height:16px;margin:0;cursor:pointer;accent-color:#6366f1}
+.tpill{flex:none;display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:8px;font:700 12px/1 ui-monospace,Consolas,monospace;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
+.row:hover .tpill,.row.active .tpill{background:var(--green);border-color:var(--green);color:#fff}
+/* 編輯模式點整列是選取，只有時間標籤是播放，所以 hover 只亮時間標籤本身 */
+.drawer.editing .row:hover:not(.active) .tpill{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.drawer.editing .row .tpill:hover{background:var(--green);border-color:var(--green);color:#fff}
+.tpill svg{width:9px;height:9px;fill:currentColor}
+.body{flex:1;min-width:0}
+.who{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:1px 9px;border-radius:999px;border:1px solid transparent}
+.who.host{color:var(--purple);background:var(--purple-bg);border-color:var(--purple-bd)}
+.who.guest{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+.drawer.editing .who{cursor:pointer}
+.drawer.editing .who:hover{border-style:dashed;border-color:currentColor}
+.mark{font-size:11px;font-weight:700;color:#fff;background:#6366f1;border-radius:999px;padding:1px 8px;margin-left:6px}
+button[aria-pressed="true"].tog{background:#6366f1;border-color:#6366f1;color:#fff}
+.drawer.ranging .row{cursor:cell}
+#bTwoEnds{min-width:76px} /* 「點兩端」與「取消」切換時不推動後面的時間欄 */
+.was{font-size:11px;color:var(--muted);margin-left:6px;text-decoration:line-through}
+.txt{margin:3px 0 0;color:var(--ink2)}
+
+/* 調整區 */
+.panel{border-top:1px solid var(--line);background:var(--surface2);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.prow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.plabel{font-size:12px;color:var(--muted);min-width:56px}
+.selinfo{font-size:13px;font-weight:700;min-width:0;flex:1 1 180px}
+.selinfo .mono{font-weight:600;color:var(--muted)}
+button{font:inherit;font-size:13px;font-weight:700;height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:#6366f1;border-color:#6366f1;color:#fff}
+button.save{background:var(--green);border-color:var(--green);color:#fff}
+button.ghost{background:transparent}
+.tin{width:70px;height:32px;padding:0 8px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 13px ui-monospace,Consolas,monospace;text-align:center}
+.tin.bad{border-color:#ef4444}
+.hint{font-size:12px;color:var(--muted)}
+.dirty{font-size:13px;flex:1 1 auto}
+.dirty b{color:var(--edit)}
+.sp{flex:1}
+
+/* 寫回預覽 */
+.diff{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:13px/1.8 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;color:var(--ink2);min-height:52px}
+.diff .m{color:#ef4444}.diff .p{color:var(--green)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#18181b;color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.on{opacity:1}
+ul.notes{margin:6px 0;padding-left:20px}
+ul.notes li{margin:4px 0}
+
+/* 邊聽邊標記 */
+.mbar{border-top:1px solid var(--line);background:var(--surface2);padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.drawer.editing .mbar{display:none}
+.mbar kbd{margin-right:2px}
+.tag{font-size:11px;font-weight:700;color:#fff;border-radius:999px;padding:1px 8px;margin-left:6px}
+.tag.start,.tag.end{background:#6366f1}.tag.one{background:#0891b2}.tag.check{background:#dc2626}
+.row.flash{animation:flash .6s}
+@keyframes flash{from{box-shadow:0 0 0 3px #6366f1}to{box-shadow:0 0 0 3px transparent}}
+.mlist{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 14px;margin-top:12px}
+.ment{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ment:last-of-type{border-bottom:0}
+.ment .kind{font-weight:700;min-width:64px}
+.ment .warn{color:#dc2626;font-weight:700}
+.nud{display:inline-flex;align-items:center}
+.nud button{height:28px;padding:0 7px;font-size:12px}
+.nud svg{width:10px;height:10px}
+.nud .tb{font:600 12px ui-monospace,Consolas,monospace;border-radius:0;margin:0 -1px}
+.nud button:first-child{border-radius:8px 0 0 8px}.nud button:last-child{border-radius:0 8px 8px 0}
+.mfoot{display:flex;align-items:center;gap:8px;padding:10px 0 6px}
+
+@media (max-width:560px){
+  .drawer{height:640px}
+  .row{gap:8px}
+  .gut{width:22px}
+  .tpill{padding:0 7px}
+  .plabel{min-width:0;width:100%}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>說話者調整區</h1>
+  <p class="lede">邊聽邊按鍵標記哪裡錯了，聽完一次套用；要細修再切到編輯模式。開關只在本機 <code class="mono">npm run dev</code> 出現。下面用 ep10 02:01–03:36 的真實逐字稿示範，其中 <b>02:42–03:04</b> 故意整串對調了，可以試著修回來。</p>
+
+  <div class="player" id="player"><span id="pstate">▶ 播放中</span> <b id="ptime">02:01</b></div>
+
+  <section class="drawer" id="drawer" aria-label="完整逐字稿">
+    <div class="dhead">
+      <strong>完整逐字稿</strong>
+      <span class="hright">
+        <button class="pending" id="pending" hidden title="切到編輯模式查看"></button>
+        <span class="seg" role="group" aria-label="模式">
+          <button id="mListen" aria-pressed="true">聆聽</button>
+          <button class="ed" id="mEdit" aria-pressed="false" title="快捷鍵 E">編輯</button>
+        </span>
+      </span>
+    </div>
+    <div class="list" id="list"></div>
+
+    <div class="mbar" aria-label="標記正在播的這列">
+      <span class="hint">標記正在播的這列，不會暫停：</span>
+      <button id="kStart" title="快捷鍵 ["><kbd>[</kbd>對調起點</button>
+      <button id="kEnd" title="快捷鍵 ]"><kbd>]</kbd>對調終點</button>
+      <button id="kOne" title="快捷鍵 S"><kbd>S</kbd>單句對調</button>
+      <button id="kCheck" title="快捷鍵 ?"><kbd>?</kbd>待查</button>
+    </div>
+
+    <div class="panel" aria-label="調整區">
+      <div class="prow">
+        <span class="selinfo" id="selinfo"></span>
+        <button class="primary" id="bSwap" disabled title="快捷鍵 S">對調 福嶋 ⇄ 佐藤</button>
+        <button id="bHost" disabled>全設為 福嶋</button>
+        <button id="bGuest" disabled>全設為 佐藤</button>
+        <button class="ghost" id="bClear" disabled>取消選取</button>
+      </div>
+      <div class="prow">
+        <span class="plabel">選範圍</span>
+        <button class="tog" id="bTwoEnds" aria-pressed="false" title="快捷鍵 R">點兩端</button>
+        <span class="hint">或</span>
+        從 <input class="tin" id="tFrom" placeholder="mm:ss" inputmode="numeric" aria-label="起始時間">
+        到 <input class="tin" id="tTo" placeholder="mm:ss" inputmode="numeric" aria-label="結束時間">
+        <button id="bRange">選取這段</button>
+        <span class="hint" id="rangeHint">兩端都算在內</span>
+      </div>
+      <div class="prow">
+        <button id="bUndo" disabled title="快捷鍵 Ctrl+Z">↶ 復原</button>
+        <span class="dirty" id="dirty">沒有改動</span>
+        <button class="save" id="bSave" disabled>寫回 ep10.md</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="mlist" aria-label="標記清單">
+    <div id="ments"></div>
+    <div class="mfoot">
+      <span class="hint sp" id="mhint"></span>
+      <button class="primary" id="bApply" disabled>全部套用</button>
+    </div>
+  </div>
+
+  <h2>邊聽邊標記</h2>
+  <ul class="notes">
+    <li>不用切模式，影片照播。聽到標錯，按鍵標記<b>正在播的那一列</b>：<kbd>[</kbd> 對調起點、<kbd>]</kbd> 對調終點、<kbd>S</kbd> 單句對調、<kbd>?</kbd> 待查（不確定是誰，之後再看）。</li>
+    <li>反應慢半拍很正常：清單裡每個時間兩邊的箭頭可以往前往後挪一列。點時間本身跳回那裡重聽。</li>
+    <li>起點和終點按時間配對。少了一邊、或連按兩個起點，清單會標紅，不會被套用。</li>
+    <li><b>全部套用</b>：所有配好的段落和單句一次對調，改動出現在下面的「寫回」預覽，還沒存檔，可以復原。待查不會自動套用，點它的「去改」會切到編輯模式並選好那一列。</li>
+  </ul>
+
+  <h2>怎麼操作（編輯模式）</h2>
+  <ul class="notes">
+    <li><b>聆聽模式</b>：跟現在的網站一樣，點文字播放器跳到那一列，沒有勾選框也沒有調整區。</li>
+    <li><b>切到編輯</b>（右上角開關，或按 <kbd>E</kbd>）：影片自動暫停，正在播的那一列先幫你選起來。下面幾項都只在編輯模式有。</li>
+    <li><b>切回聆聽</b>：影片接著播。還沒寫回的改動會保留，右上角顯示「未存 N 列」，點它回到編輯模式。</li>
+    <li><b>選一段</b>：編輯模式下點 A 列，按住 <kbd>Shift</kbd> 再點 B 列，A～B 全部選起來。點整列任何地方都可以，不用瞄準小方框。</li>
+    <li><b>點兩端</b>（調整區「選範圍」的按鈕，或按 <kbd>R</kbd>）：不用按 Shift。按一下，再點範圍的第一列，那列會標「起點」；接著點另一端，中間全部選起來，然後自動結束。上下哪一端先點都可以，按 <kbd>Esc</kbd> 取消。</li>
+    <li><b>勾左邊的方框</b>：只加入或拿掉那一列，其他已選的不動，用來挑不相連的幾列。也可以在調整區打時間選。</li>
+    <li><b>點時間標籤</b>：編輯模式下要重聽某一列，點它的時間。</li>
+    <li><b>點人名標籤</b>：單列切換，依序是 福嶋 → 佐藤 → 兩人同時 → 工作人員。</li>
+    <li><b>對調</b>：選到的列福嶋和佐藤互換，「兩人同時」和「工作人員」不動。快捷鍵 <kbd>S</kbd>。</li>
+    <li>改過的列左邊有橘色線，人名旁邊劃掉的是檔案裡原本的標籤。按「寫回」才會存檔。</li>
+  </ul>
+
+  <h2>寫回時會改的地方</h2>
+  <p class="hint">只換方括號裡的人名，時間碼與內文一個字都不動。</p>
+  <div class="diff" id="diff">（還沒有改動）</div>
+
+  <h2>這個工具改不了的</h2>
+  <ul class="notes">
+    <li>一列裡其實有兩個人在講：要拆列，換標籤沒用。先記下時間，另外改。</li>
+    <li>總結與段落裡「誰說了什麼」的敘述：標籤修好後要另外對一次，驗證腳本查不出來。</li>
+  </ul>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const HOST = '福嶋晴菜', GUEST = '佐藤榛夏', BOTH = HOST + '＆' + GUEST, STAFF = '工作人員';
+const CYCLE = [HOST, GUEST, BOTH, STAFF];
+const SHORT = { [HOST]: '福嶋', [GUEST]: '佐藤' };
+
+// ep10.md 原文，說話者正確
+const DATA = [
+  ['02:01', HOST, '[笑聲]不過妳有聽過節目吧？謝謝。'],
+  ['02:04', GUEST, '對。那個，我想說可以當參考，所以特別以來賓回為主聽了。'],
+  ['02:11', HOST, '嗯。有很多朋友上節目吧。'],
+  ['02:14', GUEST, '[笑聲]我也覺得「好多我認識的孩子上節目耶」。'],
+  ['02:18', HOST, '就是說啊。'],
+  ['02:19', GUEST, '所以我聽的時候也想著「對啊對啊」，一直嗯嗯地點頭。'],
+  ['02:23', HOST, '[笑聲]所以妳應該有聽過，大概知道，這個節目呢，'],
+  ['02:29', HOST, '有一本叫做はるまとぺ筆記本的東西，'],
+  ['02:32', HOST, '這裡面呢，那個，第……'],
+  ['02:33', GUEST, '好喔，好喔。'],
+  ['02:34', HOST, '從第 1 回開始，把那一回聊的內容做成 1 頁，打造嶄新的 1 頁，所以，'],
+  ['02:42', GUEST, '嗯。好厲害。'],
+  ['02:43', HOST, '也想請來賓寫上一兩句什麼什麼的。'],
+  ['02:46', GUEST, '咦，這裡面的 1 頁，我也可以寫嗎？'],
+  ['02:50', HOST, '妳願意寫嗎？'],
+  ['02:51', GUEST, '這不是超棒的嗎？'],
+  ['02:53', HOST, '謝謝。'],
+  ['02:54', GUEST, '真好。好期待。'],
+  ['02:55', HOST, '然後呢，最近的傾向是，最近開始貼貼紙了。'],
+  ['02:59', GUEST, '啊，對耶。越來越豪華了。'],
+  ['03:01', HOST, '對啊。一開始沒有貼，所以前面都沒有。'],
+  ['03:04', GUEST, '不過看得出一路摸索的痕跡。'],
+  ['03:06', HOST, '對。第[笑聲] 1 回就像是劈哩啪啦就結束了。'],
+  ['03:11', HOST, '[笑聲]所以那個，因為是第 1 回，還沒決定要寫什麼。'],
+  ['03:16', GUEST, '啊，也是啦。還在想要寫些什麼。'],
+  ['03:19', HOST, '對。所以就畫了一大堆。'],
+  ['03:21', GUEST, '嗯。嗯。不過從下一頁開始就漸漸變多了。'],
+  ['03:25', HOST, '對對。一點一點地。'],
+  ['03:26', GUEST, '嗯。'],
+  ['03:27', HOST, '漸漸變多了。那個，再稍微整、整……不對。我發現原來可以留白。'],
+  ['03:32', GUEST, '啊，好好運用空間，就會變得比較豪華吧。'],
+  ['03:36', HOST, '也許喔。'],
+];
+const sec = t => { const m = /^(\d{1,3}):([0-5]\d)$/.exec(t.trim()); return m ? +m[1] * 60 + +m[2] : null; };
+const lines = DATA.map(([t, s, x]) => ({ t, x, s: sec(t) }));
+// 示範用：02:42–03:04 故意整串對調，當作「檔案裡現在的樣子」
+const swap = s => s === HOST ? GUEST : s === GUEST ? HOST : s;
+let file = DATA.map(([t, s]) => (sec(t) >= 162 && sec(t) <= 184) ? swap(s) : s);
+let cur = file.slice();
+let sel = new Set(), anchor = null, active = 0, editing = false;
+let ranging = false, rangeStart = null; // 「點兩端」：第一下是一端，第二下是另一端，不用按 Shift
+const undo = [];
+// 邊聽邊標記：{ type: start|end|one|check, i: 列號 }
+let marks = [], mid = 0;
+const MK = { start: '對調起點', end: '對調終點', one: '單句對調', check: '待查' };
+
+const $ = id => document.getElementById(id);
+const list = $('list'), drawer = $('drawer');
+
+function render() {
+  list.innerHTML = '';
+  lines.forEach((ln, i) => {
+    const who = cur[i], edited = who !== file[i];
+    const row = document.createElement('div');
+    row.className = 'row' + (sel.has(i) ? ' sel' : '') + (i === active ? ' active' : '') + (edited ? ' edited' : '');
+    row.innerHTML =
+      `<label class="gut"><input type="checkbox" aria-label="選取 ${ln.t}" ${sel.has(i) ? 'checked' : ''}></label>` +
+      `<span class="tpill"><svg viewBox="0 0 10 10"><path d="M2 1l7 4-7 4z"/></svg>${ln.t}</span>` +
+      `<div class="body"><span class="who ${who === HOST ? 'host' : 'guest'}" role="button" tabindex="0" title="點一下換人">${who}</span>` +
+      (ranging && i === rangeStart ? '<span class="mark">起點</span>' : '') +
+      marks.filter(m => m.i === i).map(m => `<span class="tag ${m.type}">${MK[m.type]}</span>`).join('') +
+      (edited ? `<span class="was">${file[i]}</span>` : '') +
+      `<p class="txt"></p></div>`;
+    row.querySelector('.txt').textContent = ln.x;
+    const cb = row.querySelector('input');
+    cb.addEventListener('click', e => { e.stopPropagation(); pick(i, e.shiftKey, !ranging); });
+    row.querySelector('.gut').addEventListener('click', e => e.stopPropagation());
+    const w = row.querySelector('.who');
+    const cyc = e => { if (!editing) return; e.stopPropagation(); edit([i], s => CYCLE[(CYCLE.indexOf(s) + 1) % CYCLE.length]); };
+    w.addEventListener('click', cyc);
+    w.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cyc(e); } });
+    const seek = () => { active = i; render(); };
+    // 編輯模式：點整列＝選取（Shift 延伸），點時間標籤＝跳到那裡重聽
+    row.querySelector('.tpill').addEventListener('click', e => { if (editing) { e.stopPropagation(); seek(); } });
+    row.addEventListener('mousedown', e => { if (editing && e.shiftKey) e.preventDefault(); }); // 免得 Shift 點擊順便反白文字
+    row.addEventListener('click', e => editing ? pick(i, e.shiftKey) : seek());
+    list.appendChild(row);
+  });
+  $('ptime').textContent = lines[active].t;
+  panel();
+  markList();
+}
+
+// 依時間把起點、終點配成段落；配不起來的標紅，不套用
+function groups() {
+  const ord = { start: 0, one: 1, check: 1, end: 2 };
+  const ms = marks.slice().sort((a, b) => a.i - b.i || ord[a.type] - ord[b.type]);
+  const out = []; let open = null;
+  for (const m of ms) {
+    if (m.type === 'start') { if (open) out.push({ kind: 'warn', ms: [open], msg: '起點沒有配到終點' }); open = m; }
+    else if (m.type === 'end') {
+      if (open) { out.push({ kind: 'range', ms: [open, m] }); open = null; }
+      else out.push({ kind: 'warn', ms: [m], msg: '終點前面沒有起點' });
+    } else out.push({ kind: m.type, ms: [m] });
+  }
+  if (open) out.push({ kind: 'warn', ms: [open], msg: '還沒按終點' });
+  return out.sort((a, b) => a.ms[0].i - b.ms[0].i);
+}
+
+function addMark(type) {
+  marks.push({ type, i: active, id: mid++ });
+  render();
+  const r = list.children[active]; r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash');
+  toast(`${lines[active].t} ${MK[type]}`);
+}
+
+function markList() {
+  const gs = groups();
+  const ranges = gs.filter(g => g.kind === 'range').map(g => [g.ms[0].i, g.ms[1].i]);
+  const inRange = i => ranges.some(([a, b]) => i >= a && i <= b);
+  const chev = d => `<svg viewBox="0 0 10 10"><path d="${d}" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
+  const nud = m => `<span class="nud"><button data-n="${m.id}" data-d="-1" aria-label="往前一列">${chev('M6.5 2L3.5 5l3 3')}</button>` +
+    `<button class="tb" data-go="${m.i}" title="跳到這裡重聽">${lines[m.i].t}</button>` +
+    `<button data-n="${m.id}" data-d="1" aria-label="往後一列">${chev('M3.5 2l3 3-3 3')}</button></span>`;
+  $('ments').innerHTML = gs.length ? gs.map(g => {
+    const del = `<button class="ghost" data-del="${g.ms.map(m => m.id).join(',')}" aria-label="刪除">✕</button>`;
+    if (g.kind === 'range') return `<div class="ment"><span class="kind">段落對調</span>${nud(g.ms[0])}–${nud(g.ms[1])}<span class="hint sp">${g.ms[1].i - g.ms[0].i + 1} 列</span>${del}</div>`;
+    if (g.kind === 'warn') return `<div class="ment"><span class="kind warn">${MK[g.ms[0].type]}</span>${nud(g.ms[0])}<span class="warn sp">${g.msg}</span>${del}</div>`;
+    const extra = g.kind === 'check' ? `<button data-fix="${g.ms[0].i}">去改</button>`
+      : inRange(g.ms[0].i) ? '<span class="warn">在對調段落裡，套用後會換回原樣</span>' : '';
+    return `<div class="ment"><span class="kind">${MK[g.kind]}</span>${nud(g.ms[0])}<span class="sp"></span>${extra}${del}</div>`;
+  }).join('') : '<p class="hint">還沒有標記。邊聽邊按 <kbd>[</kbd> <kbd>]</kbd> <kbd>S</kbd> <kbd>?</kbd>。</p>';
+  const n = gs.filter(g => g.kind === 'range' || g.kind === 'one').length;
+  $('bApply').disabled = !n;
+  $('mhint').textContent = marks.length ? `${n} 項可套用` + (gs.some(g => g.kind === 'warn') ? '，紅色的要先補齊' : '') : '';
+}
+
+$('ments').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.n) { const m = marks.find(m => m.id === +b.dataset.n); m.i = Math.max(0, Math.min(lines.length - 1, m.i + +b.dataset.d)); }
+  if (b.dataset.go) active = +b.dataset.go;
+  if (b.dataset.del) { const ids = b.dataset.del.split(',').map(Number); marks = marks.filter(m => !ids.includes(m.id)); }
+  if (b.dataset.fix) { const i = +b.dataset.fix; active = i; sel = new Set([i]); anchor = i; setMode(true); return; }
+  render();
+});
+$('bApply').onclick = () => {
+  const gs = groups(), idx = [];
+  gs.forEach(g => {
+    if (g.kind === 'range') for (let k = g.ms[0].i; k <= g.ms[1].i; k++) idx.push(k);
+    if (g.kind === 'one') idx.push(g.ms[0].i);
+  });
+  const before = cur.slice();
+  idx.forEach(i => { cur[i] = swap(cur[i]); }); // 單句落在段落內會換兩次＝原樣，清單上已提醒
+  if (cur.some((s, i) => s !== before[i])) undo.push(before);
+  const used = new Set(gs.filter(g => g.kind === 'range' || g.kind === 'one').flatMap(g => g.ms.map(m => m.id)));
+  marks = marks.filter(m => !used.has(m.id));
+  render();
+  toast(`已套用，${cur.filter((s, i) => s !== file[i]).length} 列待寫回`);
+};
+[['kStart', 'start'], ['kEnd', 'end'], ['kOne', 'one'], ['kCheck', 'check']].forEach(([id, t]) => $(id).onclick = () => addMark(t));
+
+// 示範用：聆聽模式下每 2.5 秒往下播一列；編輯模式暫停
+setInterval(() => {
+  if (editing) return;
+  active = (active + 1) % lines.length;
+  render();
+  const r = list.children[active];
+  list.scrollTo({ top: r.offsetTop - list.offsetTop - 80, behavior: 'smooth' });
+}, 2500);
+
+function setMode(on) {
+  editing = on;
+  drawer.classList.toggle('editing', on);
+  $('mListen').setAttribute('aria-pressed', !on);
+  $('mEdit').setAttribute('aria-pressed', on);
+  $('pstate').textContent = on ? '❚❚ 編輯中，已暫停' : '▶ 播放中';
+  if (on && !sel.size) { sel = new Set([active]); anchor = active; }
+  if (!on) { sel.clear(); anchor = null; ranging = false; rangeStart = null; }
+  render();
+}
+$('mListen').onclick = () => setMode(false);
+$('mEdit').onclick = () => setMode(true);
+$('pending').onclick = () => setMode(true);
+$('bTwoEnds').onclick = () => setRanging(!ranging);
+
+function setRanging(on) {
+  ranging = on; rangeStart = null;
+  render();
+}
+
+function pick(i, shift, toggle) {
+  if (ranging) {
+    if (rangeStart === null) { rangeStart = i; sel = new Set([i]); }
+    else {
+      const [a, b] = rangeStart < i ? [rangeStart, i] : [i, rangeStart];
+      sel = new Set(); for (let k = a; k <= b; k++) sel.add(k);
+      ranging = false; rangeStart = null;
+    }
+    anchor = i;
+  } else if (shift && anchor !== null) {
+    const [a, b] = anchor < i ? [anchor, i] : [i, anchor];
+    for (let k = a; k <= b; k++) sel.add(k);
+  } else {
+    if (toggle) sel.has(i) ? sel.delete(i) : sel.add(i);
+    else sel = new Set([i]);
+    anchor = i;
+  }
+  render();
+}
+
+function edit(idx, fn) {
+  const before = cur.slice();
+  idx.forEach(i => { cur[i] = fn(cur[i]); });
+  if (cur.some((s, i) => s !== before[i])) undo.push(before);
+  render();
+}
+
+function panel() {
+  const n = sel.size, ids = [...sel].sort((a, b) => a - b);
+  drawer.classList.toggle('ranging', ranging);
+  $('bTwoEnds').setAttribute('aria-pressed', ranging);
+  $('bTwoEnds').textContent = ranging ? '取消' : '點兩端';
+  $('selinfo').innerHTML = ranging
+    ? (rangeStart === null ? '點範圍的第一列' : `起點 <span class="mono">${lines[rangeStart].t}</span>，再點另一端`)
+    : n
+    ? `已選 ${n} 列 <span class="mono">${lines[ids[0]].t}${n > 1 ? '–' + lines[ids[n - 1]].t : ''}</span>`
+    : '點一列，按住 Shift 再點另一列';
+  ['bSwap', 'bHost', 'bGuest', 'bClear'].forEach(id => $(id).disabled = !n);
+  if (n) { $('tFrom').value = lines[ids[0]].t; $('tTo').value = lines[ids[n - 1]].t; }
+  const changed = cur.map((s, i) => s !== file[i] ? i : -1).filter(i => i >= 0);
+  $('dirty').innerHTML = changed.length ? `未存的改動 <b>${changed.length}</b> 列` : '沒有改動';
+  $('bSave').disabled = !changed.length;
+  $('bUndo').disabled = !undo.length;
+  $('pending').hidden = editing || !changed.length;
+  $('pending').textContent = `未存 ${changed.length} 列`;
+  $('diff').innerHTML = changed.length
+    ? changed.map(i => `<span class="m">- [${lines[i].t}] [${file[i]}]</span>\n<span class="p">+ [${lines[i].t}] [${cur[i]}]</span>`).join('\n')
+    : '（還沒有改動）';
+}
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2400); }
+
+$('bSwap').onclick = () => edit([...sel], swap);
+$('bHost').onclick = () => edit([...sel], () => HOST);
+$('bGuest').onclick = () => edit([...sel], () => GUEST);
+$('bClear').onclick = () => { sel.clear(); anchor = null; render(); };
+$('bUndo').onclick = () => { if (undo.length) { cur = undo.pop(); render(); } };
+$('bRange').onclick = () => {
+  const a = sec($('tFrom').value), b = sec($('tTo').value);
+  $('tFrom').classList.toggle('bad', a === null); $('tTo').classList.toggle('bad', b === null);
+  if (a === null || b === null) { $('rangeHint').textContent = '時間要寫成 mm:ss'; return; }
+  const [lo, hi] = a <= b ? [a, b] : [b, a];
+  sel = new Set(lines.map((l, i) => l.s >= lo && l.s <= hi ? i : -1).filter(i => i >= 0));
+  $('rangeHint').textContent = sel.size ? '兩端都算在內' : '這段時間沒有任何一列';
+  render();
+};
+$('bSave').onclick = () => {
+  const n = cur.filter((s, i) => s !== file[i]).length;
+  file = cur.slice(); undo.length = 0; render();
+  toast(`（示範）實際會把 ${n} 列寫回 content/episodes/ep10.md`);
+};
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey) { setMode(!editing); return; }
+  if (!editing) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = { '[': 'start', ']': 'end', s: 'one', S: 'one', '?': 'check' }[e.key];
+    if (t) { e.preventDefault(); addMark(t); }
+    return;
+  }
+  if ((e.key === 's' || e.key === 'S') && sel.size && !e.ctrlKey && !e.metaKey) edit([...sel], swap);
+  if (e.key === 'z' && (e.ctrlKey || e.metaKey) && undo.length) { e.preventDefault(); cur = undo.pop(); render(); }
+  if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) setRanging(!ranging);
+  if (e.key === 'Escape' && ranging) { setRanging(false); return; }
+  if (e.key === 'Escape' && sel.size) { sel.clear(); anchor = null; render(); }
+});
+render();
+</script>
+</body>
+</html>

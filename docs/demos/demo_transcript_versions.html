@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>逐字稿版本差異</title>
+<style>
+:root{
+  --bg:#f7f6f3; --surface:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e2e0da;
+  --bad:#b4372f; --bad-bg:#fbeceb; --good:#1f7a4d; --good-bg:#e8f5ee; --warn:#9a6a00; --warn-bg:#fcf3dc;
+  --accent:#6b4fbb; --code:#f0eee8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16161a; --surface:#1f1f24; --ink:#ececf0; --muted:#9a9aa3; --line:#33333b;
+    --bad:#ff8a80; --bad-bg:#3a1f1e; --good:#7ad7a3; --good-bg:#1b3327; --warn:#f2c75c; --warn-bg:#3a3018;
+    --accent:#b9a4ff; --code:#2a2a31;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16161a; --surface:#1f1f24; --ink:#ececf0; --muted:#9a9aa3; --line:#33333b;
+  --bad:#ff8a80; --bad-bg:#3a1f1e; --good:#7ad7a3; --good-bg:#1b3327; --warn:#f2c75c; --warn-bg:#3a3018;
+  --accent:#b9a4ff; --code:#2a2a31;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:40px 16px 80px}
+h1{font-size:28px;line-height:1.3;margin:0 0 8px}
+h2{font-size:21px;margin:48px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:17px;margin:24px 0 8px}
+p{margin:8px 0}
+.lede{color:var(--muted);margin-bottom:24px}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.88em;background:var(--code);padding:1px 5px;border-radius:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:12px 0}
+.verdict{border-left:4px solid var(--accent)}
+.tag{display:inline-block;font-size:12px;line-height:18px;padding:0 8px 2px;border-radius:999px;font-weight:600}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.tag.good{background:var(--good-bg);color:var(--good)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.ver{display:grid;grid-template-columns:120px 1fr;gap:4px 16px;align-items:start}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+@media (max-width:560px){.ver{grid-template-columns:1fr}}
+.ver .when{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.ver ul{margin:4px 0 0;padding-left:20px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--code);font-weight:600;white-space:nowrap}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.hi-bad{color:var(--bad);font-weight:700}
+td.hi-good{color:var(--good);font-weight:700}
+.tc{font-family:ui-monospace,Consolas,monospace;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cmp td{font-size:13.5px}
+.cmp td.tc.bad{color:var(--bad);font-weight:700}
+.cmp td.tc.good{color:var(--good);font-weight:700}
+.note{font-size:14px;color:var(--muted)}
+ol.check{padding-left:22px}
+ol.check li{margin:6px 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>逐字稿版本差異</h1>
+<p class="lede">整理 HRMTP（本專案）逐字稿從 09-04 到 09-28 的幾個版本：各版怎麼做、差在哪、哪一版的問題最可能也出現在另一個專案。數字都是從 git 歷史逐版算出來的。</p>
+
+<div class="card verdict">
+  <strong>另一個專案給你的說法，大致正確</strong>
+  <p>「09-05 那版是把已經翻好的中文逐列切句，09-28 起改成照 <code>episode-workflow.md</code> 由 LLM 直接逐句看字幕翻譯」：兩段都對。</p>
+  <p>「沒有腳本」只對一半。翻譯確實沒有腳本，但規則都寫成文件，最後還要用 <code>validate-content.mjs --strict</code> 擋，這一步才是穩定品質的關鍵。只抄 workflow 文件、不設驗證，效果會差很多。</p>
+</div>
+
+<h2>各版一覽</h2>
+
+<div class="card ver">
+  <div class="when">09-04</div>
+  <div><div class="head"><strong>V0 初版</strong><span class="tag bad">不一致</span></div>
+    <ul>
+      <li>各集由不同模型、不同時期產出，粗細差很大：ep03 只有 41 列、每列約 122 字、只涵蓋到 19:51（影片 41:10）；ep07 是 124 列、時間碼還是 <code>[HH:MM:SS]</code>。</li>
+      <li>舊的批次修正腳本（<code>fix_glossary.js</code> 等）重複執行，造成損壞：括號最多疊了 9 層、ep02 的「(haraitai)」被附加 8 次、ep08 有 516 列一模一樣的重複列。</li>
+      <li>入版控時修掉了這些損壞，但譯文本身沒有重做。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card ver">
+  <div class="when">09-05 上午</div>
+  <div><div class="head"><strong>V1 照字幕段落重切</strong><span class="tag warn">半句很多</span></div>
+    <ul>
+      <li>ep03 從 VTT 重做：先把 YouTube 滾動字幕去重（每個 cue 會重複上一行），再一個 cue 翻一列，最後是 631 列、每列約 15 字、3.9 秒。</li>
+      <li>時間碼準，但一列常是半句（「真的很抱歉。現在，那個，以播出的世界線來說，」）。</li>
+      <li>另一個 commit（<code>0c99779</code>）在 6 集裡把斷掉的句子接回去。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card ver">
+  <div class="when">09-05 中午</div>
+  <div><div class="head"><strong>V2 句子切分引擎</strong><span class="tag bad">時間碼失準</span></div>
+    <ul>
+      <li>把 ep10 的做法套到 ep01–09：<strong>已經翻好的中文</strong>不重翻，只依句號重新合併或拆開，再幫新的一列估一個時間碼。</li>
+      <li>問題是中文的詞序跟日文不同，中文某個字落在日文字幕的第幾秒，沒有辦法準確對回去。結果就是一句拆成幾列時，後面幾列直接沿用第一列的時間。</li>
+      <li>全站有 <strong>1,200 處</strong>相鄰兩列時間碼相同，播放器跟讀時會一次跳好幾列。</li>
+      <li>這一版的切句腳本沒有進 repo。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card ver">
+  <div class="when">09-12 ～ 09-27</div>
+  <div><div class="head"><strong>V2.5 個別修補、新增 ep11／ep12</strong><span class="tag warn">規則還沒定</span></div>
+    <ul>
+      <li>人名、稱呼用搜尋取代逐一修正（小福 → 福ちゃん、藤本侑里、塚田悠衣⋯⋯），一個名字發現錯了就修一次。</li>
+      <li>ep11、ep12 直接從 VTT 翻譯，但當時沒有統一規則：<code>[音楽]</code> 照寫、聲音標記沒有統一、書籤名各回不同。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card ver">
+  <div class="when">09-28</div>
+  <div><div class="head"><strong>V3 全部依規則重譯</strong><span class="tag good">現行版</span></div>
+    <ul>
+      <li>12 回全部從 <code>content/epNN.ja.vtt</code> 重新翻譯，舊譯文不沿用。</li>
+      <li>規則寫在 <code>docs/episode-workflow.md</code>，用語與常客書籤名寫在 <code>docs/GLOSSARY.md</code>。</li>
+      <li>時間碼＝這一列第一個字在字幕裡的時間（VTT 有逐字時間戳記）。相鄰兩列不能同秒。</li>
+      <li>用 <code>validate-content.mjs --strict</code> 檢查，錯誤與警告都要清到零才能部署。</li>
+    </ul>
+  </div>
+</div>
+
+<h2>數字對照</h2>
+<p class="note">ep01–ep12 的【完整逐字稿】區塊。「同秒相鄰」＝相鄰兩列時間碼完全相同。</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>版本</th><th>集數</th><th>總列數</th><th>平均字數／列</th><th>同秒相鄰</th><th>含 [音樂] 的列</th></tr></thead>
+  <tbody>
+    <tr><td>V0 09-04</td><td class="n">10</td><td class="n">7,338</td><td class="n">17.0</td><td class="n">593</td><td class="n">59</td></tr>
+    <tr><td>V1 09-05 上午</td><td class="n">10</td><td class="n">6,496</td><td class="n">19.9</td><td class="n">583</td><td class="n">58</td></tr>
+    <tr><td>V2 09-05 中午</td><td class="n">10</td><td class="n">5,880</td><td class="n">22.0</td><td class="n hi-bad">1,200</td><td class="n">59</td></tr>
+    <tr><td>V2.5 09-27</td><td class="n">12</td><td class="n">6,514</td><td class="n">22.9</td><td class="n hi-bad">1,209</td><td class="n">77</td></tr>
+    <tr><td>V3 09-28 起</td><td class="n">12</td><td class="n">7,324</td><td class="n">19.0</td><td class="n hi-good">0</td><td class="n hi-good">0</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>同一段的四個版本</h2>
+<p>ep03 00:51～01:21。右欄是 VTT 逐字時間戳記：這句話第一個字實際出現的時間。</p>
+
+<h3>V2（09-05 句子切分引擎）</h3>
+<div class="scroll">
+<table class="cmp">
+  <thead><tr><th>列上的時間</th><th>中文</th><th>字幕實際時間</th></tr></thead>
+  <tbody>
+    <tr><td class="tc">00:51</td><td>現在，那個，以播出的世界線來說，大家可能會覺得「啊，這是以前的事了吧」，不過呢。</td><td class="tc">00:51</td></tr>
+    <tr><td class="tc">00:57</td><td>好的。我是從那樣的時間軸為大家送上這集節目的。</td><td class="tc">00:58</td></tr>
+    <tr><td class="tc bad">00:57</td><td>那個，這正好是第1集播出之後錄的。</td><td class="tc">01:02</td></tr>
+    <tr><td class="tc bad">00:57</td><td>所以呢，我收到了很多大家說「我聽了第1集喔」這樣的感想跟留言⋯⋯</td><td class="tc">01:07</td></tr>
+    <tr><td class="tc">01:14</td><td>好，那第3集也要好好加油——正想著這些的時候，身體就變成這樣了，真的很抱歉。</td><td class="tc">01:14</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="note">一句拆成三列，三列都掛 00:57，最後一列晚了 10 秒。</p>
+
+<h3>V3（09-28 起）</h3>
+<div class="scroll">
+<table class="cmp">
+  <thead><tr><th>列上的時間</th><th>中文</th><th>字幕實際時間</th></tr></thead>
+  <tbody>
+    <tr><td class="tc">00:51</td><td>在播出的世界線，大家可能會覺得「啊，是以前的事了吧」。</td><td class="tc">00:51</td></tr>
+    <tr><td class="tc good">00:58</td><td>好，我是從那樣的時間軸為大家播出的。</td><td class="tc">00:58（はい）</td></tr>
+    <tr><td class="tc good">01:02</td><td>呃，剛好是第 1 回播出之後。</td><td class="tc">01:02（えっと）</td></tr>
+    <tr><td class="tc good">01:07</td><td>所以呢，收到大家「我聽了第 1 回」的感想和留言，</td><td class="tc">01:07（なので）</td></tr>
+    <tr><td class="tc good">01:14</td><td>想說收到了這麼多感想，好，第 3 回也要加油的時候，</td><td class="tc">01:14</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>V0 與 V1 同一段</h3>
+<ul>
+  <li><strong>V0：</strong>00:29 一列就講完感冒、停播、道歉，約 120 字，下一列直接跳到 01:03。</li>
+  <li><strong>V1：</strong>時間都對，但切在字幕換行處：「讓大家擔心了，」「真的很抱歉。現在，那個，以播出的世界線來說，」。</li>
+</ul>
+
+<h2>為什麼 V2 的做法行不通</h2>
+<div class="card">
+  <p>時間資訊只存在日文字幕裡。翻成中文之後，詞序已經重排（日文「第1回が配信された後」→ 中文「第 1 回播出之後」），中文一個字不一定對得到日文的哪個字。這時再拿中文切句，新的一列從哪一秒開始，只能用猜的或沿用上一列。</p>
+  <p><strong>結論：要切句，就要在還看得到日文時間戳記時切，也就是邊看字幕邊翻、翻的時候決定一列到哪裡。</strong>已經翻好的中文，不要再拿來切列。</p>
+</div>
+
+<h2>給另一個專案的調整清單</h2>
+<p>照 V3 的做法，最影響結果的是這幾項。前四項處理時間碼，後面處理一致性。</p>
+<ol class="check">
+  <li><strong>來源只認 VTT。</strong>舊的中文譯文最多當用語參考，不拿來切或改寫。</li>
+  <li><strong>先處理滾動字幕。</strong>YouTube 自動字幕每個 cue 會重複上一行，要先去重，不然會翻出重複的列。</li>
+  <li><strong>時間碼＝該列第一個字在字幕裡的時間。</strong>用 VTT 裡 <code>&lt;00:01:02.079&gt;</code> 這種逐字時間，不用 cue 的開始時間；格式統一 <code>mm:ss</code>。</li>
+  <li><strong>相鄰兩列不同秒。</strong>同一秒開始的兩句併成一列；換人時後一列往後挪一秒。這條要讓驗證腳本擋，因為這是 V2 那種錯最直接的指標。</li>
+  <li><strong>照句子切列，一列一個說話者，不超過 60 字。</strong>不要照字幕換行切（V1），也不要整段塞一列（V0）。</li>
+  <li><strong>聲音標記有對照表。</strong><code>[笑い]</code>→<code>[笑聲]</code> 等，<code>[音楽]</code> 不寫；只放在該列文字裡，不單獨成列。</li>
+  <li><strong>人名先查詞表，再跑 dry-run。</strong>常客書籤名寫進 GLOSSARY；聽不出來就寫「……」，不要猜。</li>
+  <li><strong>不加譯註、不補充、不摘要。</strong>口頭禪可以省略。</li>
+  <li><strong>寫一支驗證腳本，警告也要清到零。</strong>至少檢查：時間碼遞增且不重複、說話者在名單內、單列字數、清單外的聲音標記、純標記列、整列重複。</li>
+  <li><strong>規則改了就整批重做。</strong>V2.5 一個名字修一次，一直修不完；V3 全部重譯一次，各回才真的一致。</li>
+</ol>
+
+<h2>另一個專案的計畫：用 HRMTP 的時間碼比對</h2>
+<div class="card">
+  <p>可以拿來抽查，但不要當標準答案。HRMTP 的時間碼同樣是 LLM 讀 VTT 決定的，不是程式算出來的。真正的標準是 VTT 的逐字時間戳記：拿另一個專案的某一列，找它第一個日文字在 VTT 的 <code>&lt;時間&gt;</code>，比 HRMTP 準。</p>
+  <p class="note">HRMTP 現在還沒解決的地方記在 <code>docs/agent-workflow.md</code> §8：ep04 有五列工作人員是照上下文判斷的，另外有幾個名字字幕聽不出來，寫成「……」。</p>
+</div>
+
+</main>
+</body>
+</html>

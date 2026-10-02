@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>逐字稿版面調整</title>
+<style>
+:root{
+  --bg:#f4f4f5; --surface:#fff; --surface2:#f4f4f5; --ink:#18181b; --ink2:#3f3f46; --muted:#71717a; --line:#e4e4e7; --row:#f4f4f5;
+  --purple:#9333ea; --purple-bg:rgba(168,85,247,.10); --purple-bd:rgba(168,85,247,.22);
+  --amber:#d97706; --amber-bg:rgba(245,158,11,.10); --amber-bd:rgba(245,158,11,.22);
+  --green:#059669; --green-bg:#ecfdf5; --green-bd:#a7f3d0; --green-solid:#10b981;
+  --indigo:#4f46e5; --indigo-bg:rgba(99,102,241,.08); --indigo-bd:rgba(99,102,241,.45);
+  --bad:#dc2626; --good:#059669;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09090b; --surface:#18181b; --surface2:#27272a; --ink:#fafafa; --ink2:#d4d4d8; --muted:#a1a1aa; --line:#27272a; --row:rgba(39,39,42,.8);
+    --purple:#c084fc; --amber:#fbbf24; --green:#34d399; --green-bg:rgba(16,185,129,.12); --green-bd:rgba(52,211,153,.30);
+    --indigo:#a5b4fc; --indigo-bg:rgba(99,102,241,.10); --indigo-bd:rgba(129,140,248,.45); --bad:#f87171; --good:#34d399;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#09090b; --surface:#18181b; --surface2:#27272a; --ink:#fafafa; --ink2:#d4d4d8; --muted:#a1a1aa; --line:#27272a; --row:rgba(39,39,42,.8);
+  --purple:#c084fc; --amber:#fbbf24; --green:#34d399; --green-bg:rgba(16,185,129,.12); --green-bd:rgba(52,211,153,.30);
+  --indigo:#a5b4fc; --indigo-bg:rgba(99,102,241,.10); --indigo-bd:rgba(129,140,248,.45); --bad:#f87171; --good:#34d399;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:24px;line-height:1.3;margin:0 0 6px}
+h2{font-size:19px;margin:44px 0 8px}
+h3{font-size:15px;margin:20px 0 6px}
+p{margin:6px 0}
+.lede{color:var(--muted)}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
+.note{color:var(--muted);font-size:13px}
+ul.facts{margin:8px 0;padding-left:20px}
+ul.facts li{margin:3px 0}
+.bad{color:var(--bad);font-weight:700}.good{color:var(--good);font-weight:700}
+.ok-tag{display:inline-block;font-size:12px;font-weight:700;line-height:1.5;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);border-radius:999px;padding:1px 10px;margin-left:8px;vertical-align:2px}
+.tabs{display:inline-flex;flex-wrap:wrap;gap:4px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin:0 8px 8px 0}
+.tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;height:30px;padding:0 12px;border-radius:7px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px;align-items:start}
+.label{font-size:13px;font-weight:700;margin:0 0 6px}
+.scroll{overflow-x:auto}
+.scroll th,.scroll td{white-space:nowrap}
+
+/* 縮放外框：裡面的 mock 固定寬度排版，再整體縮放 */
+.vp{position:relative;overflow:hidden;border-radius:14px;outline:1px dashed var(--line);outline-offset:6px;margin:6px 0 10px}
+.vp>.mock{position:absolute;left:0;top:0;transform-origin:0 0}
+.mock{font-size:16px;line-height:1.5} /* Tailwind preflight 的 body 字級與行高 */
+.mock.desk{width:864px}
+.mock.phone{width:343px}
+#measure{position:absolute;left:-10000px;top:0;visibility:hidden}
+
+/* 站上元件替身（照 TranscriptMode 的 class 換算） */
+.stack{display:flex;flex-direction:column;gap:20px}
+.player{aspect-ratio:16/9;background:#000;border-radius:24px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:#52525b;font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.phone .card{padding:16px}
+.ghead{line-height:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--line)}
+.ghead b{color:var(--ink2);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green-solid)}
+.seg{display:inline-flex;background:var(--surface2);padding:2px;border-radius:8px;border:1px solid var(--line)}
+.seg span{padding:2px 8px;border-radius:6px;font:700 12px/16px ui-monospace,Consolas,monospace;color:var(--muted)}
+.seg span.on{background:var(--green-solid);color:#09090b}
+.rows{display:flex;flex-direction:column}
+.row{display:flex;align-items:flex-start;gap:16px;padding:12px;border-radius:12px;border-bottom:solid 0 currentColor}
+.phone .row{gap:12px;padding:10px 8px}
+.rows .row:not(:last-child){border-bottom:1px solid var(--line)}
+.tbtn{flex:none;margin-top:2px;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font:600 12px/16px ui-monospace,Consolas,monospace;background:var(--surface2);color:var(--ink2);border:1px solid var(--line)}
+.whorow{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.who{display:inline-block;font-weight:700;font-size:12px;line-height:16px;padding:2px 8px;border-radius:999px;border:1px solid}
+.who.h{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-bd)}
+.who.g{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
+.txt{margin:0;font-weight:500;font-size:16px;line-height:1.625}
+.phone .txt{font-size:14px}
+.row.active{background:var(--row)}
+
+.ctrl{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.phone .ctrl{flex-direction:column;align-items:stretch}
+.grp{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.phone .grp{gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);border-radius:999px;padding:4px 10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:12px;line-height:16px;font-family:inherit;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);border-radius:12px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.btn.solid{background:var(--green-solid);color:#09090b;border:0;padding:8px 16px}
+.time{font:700 14px/20px ui-monospace,Consolas,monospace;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:4px 10px}
+.chk{display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--ink2);}
+.chk i{width:16px;height:16px;border-radius:4px;background:#3b82f6;display:inline-block}
+.prog{font:12px/16px ui-monospace,Consolas,monospace;color:var(--muted);display:flex;align-items:center;gap:8px}
+
+.panel{border:1px dashed var(--indigo-bd);background:var(--indigo-bg);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;font-size:12px;line-height:16px}
+.panel .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;color:var(--muted)}
+.panel .hd b{color:var(--indigo)}
+.mk{display:inline-flex;align-items:center;gap:6px;height:32px;font-weight:700;font-size:12px;line-height:16px;font-family:inherit;color:var(--ink2);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 12px;white-space:nowrap}
+kbd{font:700 11px/1 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:2px 5px;background:var(--surface2);color:var(--ink)}
+.foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding-top:4px;color:var(--muted)}
+.foot .acts{display:flex;gap:6px;flex-wrap:wrap}
+.ghost{display:inline-flex;align-items:center;height:32px;font-weight:700;font-size:12px;line-height:16px;font-family:inherit;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:0 12px;opacity:.55;background:transparent}
+
+/* 提案用的零件 */
+.transport{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.seek{display:inline-flex;align-items:stretch;border:1px solid var(--green-bd);border-radius:10px;overflow:hidden;background:var(--green-bg);flex:none}
+.seek button{border:0;background:transparent;color:var(--green);font:700 12px/1 ui-monospace,Consolas,monospace;padding:0 10px;cursor:pointer;min-height:32px}
+.seek button+button{border-left:1px solid var(--green-bd)}
+.seek button:hover{background:rgba(16,185,129,.18)}
+.seek .now{display:flex;align-items:center;padding:0 10px;font:700 14px/1 ui-monospace,Consolas,monospace;color:var(--green);border-left:1px solid var(--green-bd);border-right:1px solid var(--green-bd)}
+.sgrp{display:inline-flex;align-items:center;gap:8px}
+.hint{font-size:11px;color:var(--muted);white-space:nowrap}
+.marks{display:inline-flex;gap:6px;flex-wrap:wrap}
+.marks .mk{border-style:dashed;border-color:var(--indigo-bd);padding:0 10px}
+/* 精簡版標記鈕：連成一條；手機只留一個字 */
+.mseg{display:inline-flex;align-items:stretch;border:1px dashed var(--indigo-bd);border-radius:10px;overflow:hidden;background:var(--surface);flex:none}
+.mseg>span{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:0 10px;font-weight:700;font-size:12px;line-height:1;color:var(--ink2)}
+.phone .mseg>span{min-width:34px;padding:0 8px;font-size:13px}
+.mseg>span+span{border-left:1px dashed var(--indigo-bd)}
+/* C：控制列併進卡片 */
+.cfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.cfoot .grp{gap:8px}
+.phone .cfoot .btn.solid{flex:1}
+.drawer{border:1px dashed var(--indigo-bd);background:var(--indigo-bg);border-radius:12px;font-size:12px}
+.drawer summary{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;color:var(--muted);list-style:none}
+.drawer summary::-webkit-details-marker{display:none}
+.drawer summary b{color:var(--indigo)}
+.drawer summary .mk{margin-left:auto}
+.drawer .body{padding:0 10px 10px;display:flex;flex-direction:column;gap:6px}
+/* D：手機底部固定列 */
+.dockcap{font-size:12px;color:var(--muted);margin:14px 0 6px;border-top:1px dashed var(--line);padding-top:8px}
+.dock{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+.devtag{font-size:11px;font-weight:700;color:var(--indigo)}
+.hide{display:none!important}
+
+/* 白線 */
+.wl{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 16px}
+.wl .row{padding:10px 8px}
+.wl.slow .row{transition-duration:1.6s!important}
+.wl.before .row{transition:all .2s}
+.wl.after .row{transition:background-color .2s}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 10px}
+.bar button{font:inherit;font-size:13px;height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--surface2);border-radius:5px;padding:1px 5px}
+pre{font:13px/1.6 ui-monospace,Consolas,monospace;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td.n{font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
+tr.pick td{background:var(--green-bg)}
+@media (max-width:600px){table.props tr:first-child{display:none}table.props tr{display:block;border-bottom:1px solid var(--line);padding:6px 0}table.props td{display:block;border:0;padding:2px 8px}table.props td:nth-child(3)::before{content:"好處：";color:var(--good);font-weight:700}table.props td:nth-child(4)::before{content:"代價：";color:var(--bad);font-weight:700}}
+</style>
+</head>
+<body>
+<main>
+<h1>逐字稿：版面、白線、前後跳秒</h1>
+<p class="lede">三個問題各一節。下面的畫面都是照 <code>TranscriptMode.tsx</code> 的實際 class 換算的替身；「現在」的數字是在 dev server（ep10）上量的，提案的數字是這頁打開時直接量替身（未縮放）。</p>
+
+<!-- ───────── 1. 版面 ───────── -->
+<h2>一、加了標記區之後的版面</h2>
+<p>實際量到的問題：</p>
+<ul class="facts">
+  <li><b>標記按鈕不在「畫面定位」看得到的範圍。</b>畫面定位會把視窗底邊捲到「字幕群底下的空白」中間（1280×900 下約 y=1264），控制列從 1274 開始，標記區從 1359 開始，所以兩個都在畫面外。邊聽邊標的時候，按鈕永遠看不到，只能靠鍵盤。</li>
+  <li><b>手機上控制列 163px、標記區 218px</b>，兩張卡疊起來比字幕群還高。「即時字幕群 (4句)」被擠成兩行，「寫回 Markdown」自己掉到第三行。</li>
+  <li>還沒有任何標記的時候，標記區只放一句說明和三顆灰掉的按鈕，卻佔 114px（桌機）。</li>
+</ul>
+
+<h3>四個提案</h3>
+<table class="props">
+  <tr><th>提案</th><th>做法</th><th>好處</th><th>代價</th></tr>
+  <tr><td><b>A</b> 卡片底部</td><td>字幕群卡片底部加一列：左邊前後跳＋時間，右邊四顆標記鈕。控制列拿掉「目前進度」。標記清單有標記才出現。</td><td>按鈕在字幕下面，眼睛往下就到；畫面定位後看得到</td><td>字幕群變高；手機上標記鈕會換到第二行</td></tr>
+  <tr><td><b>B</b> 卡片頂部</td><td>同一列放進字幕群<b>標題列</b>，取代「即時字幕群 (4句同步)」那行字；標記鈕改成連成一條的精簡版（手機只留一個字）。</td><td>離影片最近；字幕群幾乎不變高</td><td>標題文字沒了；手機上標題列會折行</td></tr>
+  <tr><td><b>C</b> 合成一張卡</td><td>控制列整張併進字幕群卡片底部（兩列：前後跳＋標記、同步／定位／展開）。標記清單改成卡片裡可收合的一條。</td><td>字幕群以下完全沒東西；畫面定位後所有按鈕都在畫面內，包含「展開完整逐字稿」</td><td>卡片最高，定位後影片被吃掉最多（手機只剩一半）</td></tr>
+  <tr><td><b>D</b> 手機底部固定列</td><td>桌機同 A。手機把前後跳＋精簡標記鈕做成固定在視窗底部的一條，捲到哪都在。</td><td>手機上不用先按畫面定位；拇指搆得到</td><td>永遠蓋住畫面底部一條（搭 ±15 時變兩行）；iPhone 底部手勢區要留空；只在逐字稿模式出現</td></tr>
+</table>
+
+<div>
+  <span class="tabs" id="t-ver"><button aria-pressed="false" data-v="now">現在</button><button aria-pressed="true" data-v="A">A 底部</button><button aria-pressed="false" data-v="B">B 頂部</button><button aria-pressed="false" data-v="C">C 合併</button><button aria-pressed="false" data-v="D">D 固定列</button></span>
+  <span class="tabs" id="t-env"><button aria-pressed="true" data-e="dev">本機 npm run dev</button><button aria-pressed="false" data-e="prod">正式站</button></span>
+  <span class="tabs" id="t-marks"><button aria-pressed="true" data-m="0">沒有標記</button><button aria-pressed="false" data-m="1">有 2 筆標記</button></span>
+  <span class="tabs" id="t-sk"><button aria-pressed="false" data-sk="5">±5</button><button aria-pressed="true" data-sk="5_15">±5 ±15</button><button aria-pressed="false" data-sk="5_10">±5 ±10</button><button aria-pressed="false" data-sk="shift">±5（Shift／長按 15）</button></span>
+</div>
+
+<div>
+  <div style="max-width:864px"><p class="label">桌機（內容寬 864px）</p><div class="vp" data-w="864"><div class="mock desk" id="m-desk"></div></div></div>
+  <div style="max-width:343px;margin-top:28px"><p class="label">手機 375（內容寬 343px）</p><div class="vp" data-w="343"><div class="mock phone" id="m-phone"></div></div></div>
+</div>
+<p class="note" id="h-note"></p>
+
+<h3>量到的數字（未縮放，前後跳用上面選的那組）</h3>
+<p class="note">「字幕群以下」＝字幕群卡片底邊到最後一張卡底邊。「定位後」照 <code>scrollToTheaterView</code> 算：視窗底邊＝字幕群底下空白的中間，頂端扣掉 64px 的 sticky navbar，再套「最多捲到播放器頂部 −80px」的限制。✓＝整顆按鈕在畫面內。「影片露出」＝定位後影片在 navbar 底下看得到的高度／影片全高；現在的設計本來就只露出影片下半部和時間軸，字幕群越高，影片被吃掉越多。</p>
+<div class="scroll"><table id="cmp"></table></div>
+<p>看數字（跟「現在」比，前後跳用 ±5 ±15）：<b>B</b> 桌機字幕群只多 8px，影片露出幾乎不變，最省；手機多 60px（只用 ±5 時多 18px）。<b>A</b> 按鈕最好找，字幕群桌機多 55px、手機多 97px，影片少露 55px。<b>C</b> 字幕群以下全空，但手機定位後影片只剩 99／193px。<b>D</b> 只解決手機，固定列一直蓋住畫面底部，搭 ±15 時還會變兩行。五個提案在 2 筆標記時，手機都比現在矮。</p>
+
+<!-- ───────── 2. 白線 ───────── -->
+<h2>二、字幕往上跳時閃一條白線<span class="ok-tag">已確認修好</span></h2>
+<p>你已經在 dev server 上確認：改成 <code>transition-[background-color]</code> 之後，字幕往上跳不再閃白線。下面保留當時的原因和前後對照。</p>
+<ul class="facts">
+  <li>字幕群每一列都有 <code>transition-all duration-200</code>（為了 hover 變底色）。</li>
+  <li>列與列之間的分隔線是 <code>divide-y</code>：除了最後一列，每列底下有一條 1px 線。最後一列的線寬是 0，顏色是預設的 <code>currentColor</code>，也就是字的顏色，深色模式下是<b>白色</b>。</li>
+  <li>字幕往前推一句時，原本的最後一列變成倒數第二列，要長出分隔線。因為 <code>transition-all</code>，線的顏色會從白色<b>慢慢變</b>成深灰：實測 105ms 時亮度 0.935、184ms 時 0.462、272ms 才到 0.273。所以白線只閃 0.1 秒左右，很難截圖。</li>
+</ul>
+<div class="bar">
+  <button id="wl-step">往前推一句</button>
+  <button id="wl-auto">自動播放</button>
+  <label class="note"><input type="checkbox" id="wl-slow" checked> 放慢 8 倍（1.6 秒），比較看得出來</label>
+</div>
+<div class="cols">
+  <div><p class="label"><span class="bad">修正前</span>　transition-all</p><div class="wl before slow" id="wl-a"><div class="rows"></div></div></div>
+  <div><p class="label"><span class="good">修正後</span>　transition-[background-color]</p><div class="wl after slow" id="wl-b"><div class="rows"></div></div></div>
+</div>
+<pre>  className="group py-2.5 ... hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 <s>transition-all</s> transition-[background-color] duration-200"</pre>
+
+<!-- ───────── 3. 前後跳 ───────── -->
+<h2>三、前後跳：只有 ±5，還是再加 ±15</h2>
+<p>四組按鈕放進同一個位置（A 的卡片底部列，本機、有標記鈕），桌機和手機各一張，按鈕都能按，時間會跟著變。最後一組的 Shift 點或按住 0.45 秒＝15 秒。</p>
+<div id="sk-grid"></div>
+<div class="scroll"><table id="sk-cmp"></table></div>
+<p class="note">「可用寬」＝卡片內容寬（桌機 864−40−2＝822，手機 343−32−2＝309）。「同一列」＝前後跳和標記鈕排在同一行。</p>
+
+<h3>建議：±5 和 ±15 兩組按鈕，配提案 A</h3>
+<ul class="facts">
+  <li><b>±5 跟 YouTube 的 <kbd>←</kbd> <kbd>→</kbd> 一樣</b>，剛好是一兩句話，聽到說話者標錯時倒回去再聽一次最常用。</li>
+  <li><b>第二組取 15 不取 10。</b>10 只是按兩下 5，省不了多少；15 是三下，跳過一段長獨白比較有感。YouTube 的 <kbd>J</kbd> <kbd>L</kbd> 是 10 秒，但那是在影片有焦點時才作用，跟我們的按鈕不衝突。</li>
+  <li><b>手機放得下</b>：−15 −5 時間 +5 +15 寬 211px，可用 309，自己一行不會折。放在 A 的底部列時，標記鈕本來就在第二行，沒有多出一行；放在 B 頂部或 C 的精簡標記鈕旁邊，手機會多一行（約 +42px）；D 的固定列會從 52px 變 94px。</li>
+  <li><b>不建議 Shift／長按</b>：看不出來有這功能；手機長按會跟系統的選字、放大鏡搶。</li>
+  <li>鍵盤（焦點在頁面上時）：<kbd>←</kbd> <kbd>→</kbd> ＝ 5 秒，<kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd> ＝ 15 秒。不綁 <kbd>J</kbd> <kbd>L</kbd>，免得同一顆鍵在影片內是 10、在頁面上是 15。</li>
+  <li>手機沒有鍵盤，所以按鈕要在畫面定位看得到的地方，見第一節的表。前後跳正式站也有，不是只有本機。</li>
+</ul>
+<div id="measure" aria-hidden="true"></div>
+</main>
+
+<script>
+const LINES = [
+  ['00:26','h','福嶋晴菜','大概一個月做 2 次，所以已經過了 5 個月了呢。好開心。'],
+  ['00:33','h','福嶋晴菜','來，在這值得紀念的第 10 回，這次也請到了來賓。'],
+  ['00:39','h','福嶋晴菜','那麼，這次的來賓是這位。'],
+  ['00:41','g','佐藤榛夏','こんまとぺ。……這次呢，受到福ちゃん的邀請，來到值得紀念的第 10 回了喔。'],
+  ['00:51','h','福嶋晴菜','謝謝。'],
+  ['00:52','g','佐藤榛夏','還請多多指教。'],
+  ['00:55','h','福嶋晴菜','請多指教。榛夏，最近好嗎？'],
+  ['00:58','g','佐藤榛夏','很好喔，最近天氣也變涼了。'],
+];
+const S = {v:'A', e:'dev', m:0, t:44, sk:'5_15'};
+const SK = {'5':{steps:[5],name:'±5'}, '5_15':{steps:[15,5],name:'±5 ±15'}, '5_10':{steps:[10,5],name:'±5 ±10'}, 'shift':{steps:[5],shift:true,name:'±5（Shift／長按 15）'}};
+const fmt = s => String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+const row = (l,active) => `<div class="row${active?' active':''}"><span class="tbtn">▶ ${l[0]}</span><div><div class="whorow"><span class="who ${l[1]}">${l[2]}</span></div><p class="txt">${l[3]}</p></div></div>`;
+const rowsHTML = () => `<div class="rows">${LINES.slice(2,6).map((l,k)=>row(l,k===1)).join('')}</div>`;
+const segHTML = short => `<span class="seg">${[1,2,3,4,5].map(n=>`<span class="${n===4?'on':''}">${n}${short?'':'句'}</span>`).join('')}</span>`;
+const head = phone => `<div class="ghead"><b><span class="dot"></span>即時字幕群 (4句同步)</b><span style="display:flex;align-items:center;gap:6px">${phone?'':'<span style="font-size:11px">顯示句數：</span>'}${segHTML(false)}</span></div>`;
+const MK = [['[','起點','起'],[']','終點','終'],['S','單句','單'],['?','待查','查']];
+const marksFull = () => `<span class="marks">${MK.map(([k,l])=>`<span class="mk"><kbd>${k}</kbd>${l}</span>`).join('')}</span>`;
+const marksCompact = phone => `<span class="mseg">${MK.map(([k,l,c])=>phone?`<span title="${l}（${k}）" aria-label="${l}">${c}</span>`:`<span title="${l}"><kbd>${k}</kbd>${l}</span>`).join('')}</span>`;
+function seekHTML(phone, sk=S.sk){
+  const c = SK[sk];
+  const b = d => `<button data-d="${d}"${c.shift?' data-hold':''} title="${d<0?'往前':'往後'} ${Math.abs(d)} 秒${c.shift?'（Shift 點或長按 = 15 秒）':''}">${d<0?'−':'+'}${Math.abs(d)}</button>`;
+  const seek = `<span class="seek">${c.steps.map(s=>b(-s)).join('')}<span class="now">${fmt(S.t)}</span>${[...c.steps].reverse().map(s=>b(s)).join('')}</span>`;
+  return c.shift && !phone ? `<span class="sgrp">${seek}<span class="hint">Shift ＝15</span></span>` : seek;
+}
+const dev = () => S.e==='dev';
+const transport = (phone, marks, sk) => `<div class="transport">${seekHTML(phone, sk)}${dev()?marks:''}</div>`;
+const ctrl = (phone, withTime) => `<div class="ctrl"><div class="grp">${withTime?`<span class="prog">目前進度: <span class="time">${fmt(S.t)}</span></span>`:''}<span class="pill">● 雙向同步連動中</span><span class="btn">⌖ 畫面定位</span></div>
+   <div class="grp"><span class="chk"><i></i>即時字幕群 (4句)</span><span class="btn solid">⌕ 展開完整逐字稿與搜尋 (863 句)</span></div></div>`;
+const MARK_ROWS = `<div class="mono" style="display:flex;gap:8px;align-items:center"><span class="mk" style="padding:3px 8px">對調</span>00:39 → 00:52<span style="margin-left:auto;color:var(--muted)">4 句</span></div>
+   <div class="mono" style="display:flex;gap:8px;align-items:center"><span class="mk" style="padding:3px 8px">單句</span>01:12<span style="margin-left:auto;color:var(--muted)">1 句</span></div>`;
+const marksList = () => dev()&&S.m ? `<div class="panel"><div class="hd"><b>本機才有</b><span>2 筆標記</span></div>
+  <div style="display:flex;flex-direction:column;gap:6px">${MARK_ROWS}</div>
+  <div class="foot"><span>套用後可復原</span><span class="acts"><span class="mk">全部套用</span><span class="mk">復原</span><span class="mk">寫回 Markdown</span></span></div></div>` : '';
+const card = inner => `<div class="card">${inner}</div>`;
+const player = `<div class="player">YouTube</div>`;
+
+const R = {
+  now(phone){
+    const panel = dev() ? `<div class="panel"><div class="hd marks-old"><b>本機才有</b><span>標記正在播的這列，不會暫停：</span><span class="mk"><kbd>[</kbd>對調起點</span><span class="mk"><kbd>]</kbd>對調終點</span><span class="mk"><kbd>S</kbd>單句對調</span><span class="mk"><kbd>?</kbd>待查</span></div>
+      <div class="foot"><span>${S.m?'2 筆標記':'還沒有標記。抽屜裡點人名可以單列切換。'}</span><span class="acts"><span class="ghost">全部套用</span><span class="ghost">復原</span><span class="ghost">寫回 Markdown</span></span></div></div>` : '';
+    return `<div class="stack">${player}${card(head(phone)+rowsHTML())}${ctrl(phone,true)}${panel}</div>`;
+  },
+  A(phone){ return `<div class="stack">${player}${card(head(phone)+rowsHTML()+transport(phone, marksFull()))}${ctrl(phone)}${marksList()}</div>`; },
+  B(phone){
+    const h = `<div class="ghead"><span class="sgrp" style="flex-wrap:wrap">${seekHTML(phone)}${dev()?marksCompact(phone):''}</span>${segHTML(phone)}</div>`;
+    return `<div class="stack">${player}${card(h+rowsHTML())}${ctrl(phone)}${marksList()}</div>`;
+  },
+  C(phone){
+    const foot = `<div class="cfoot"><div class="grp"><span class="pill">● 雙向同步連動中</span><span class="btn">⌖ 畫面定位</span><span class="chk"><i></i>字幕群</span></div><span class="btn solid">⌕ 展開完整逐字稿與搜尋 (863 句)</span></div>`;
+    const drawer = dev()&&S.m ? `<details class="drawer"><summary><b>▸ 2 筆標記</b><span>套用後可復原</span><span class="mk">寫回 Markdown</span></summary><div class="body">${MARK_ROWS}<div class="foot"><span></span><span class="acts"><span class="mk">全部套用</span><span class="mk">復原</span></span></div></div></details>` : '';
+    return `<div class="stack">${player}${card(head(phone)+rowsHTML()+transport(phone, phone?marksCompact(true):marksFull())+drawer+foot)}</div>`;
+  },
+  D(phone){
+    if (!phone) return R.A(false);
+    return `<div class="stack">${player}${card(head(true)+rowsHTML())}${ctrl(true)}${marksList()}</div>
+      <p class="dockcap">↓ 固定在視窗底部（position: fixed，捲到哪都在）</p>
+      <div class="dock">${seekHTML(true)}${dev()?marksCompact(true):''}</div>`;
+  },
+};
+
+// 量一個替身（未縮放）：字幕群高、以下高、畫面定位後按鈕在不在畫面內
+function probe(m, phone){
+  const vh = phone?812:900, NAV = 64;
+  const st = m.querySelector('.stack'), c = st.querySelector('.card');
+  const T = st.getBoundingClientRect().top;
+  const y = el => el.getBoundingClientRect().top - T;
+  const cBot = y(c) + c.offsetHeight;
+  const next = c.nextElementSibling;
+  const mid = next ? cBot + (y(next)-cBot)/2 : cBot + 10;
+  const top = Math.max(mid - vh, y(st.querySelector('.player')) - NAV - 16);
+  const vis = [top + NAV, top + vh];
+  const dock = m.querySelector('.dock');
+  const check = el => {
+    if (!el) return null;
+    if (dock && dock.contains(el)) return {ok:true, fixed:true};
+    const a = y(el), b = a + el.offsetHeight;
+    const cut = Math.max(0, vis[0]-a) + Math.max(0, b-vis[1]);
+    return {ok: cut===0, cut: Math.round(cut), out: cut >= el.offsetHeight};
+  };
+  const pl = st.querySelector('.player'), pTop = y(pl), pBot = pTop + pl.offsetHeight;
+  return {
+    card: Math.round(c.offsetHeight),
+    below: Math.max(0, Math.round(st.offsetHeight - cBot)),
+    player: [Math.round(Math.max(0, Math.min(pBot, vis[1]) - Math.max(pTop, vis[0]))), Math.round(pl.offsetHeight)],
+    dock: dock ? Math.round(dock.offsetHeight) : 0,
+    seek: check(m.querySelector('.seek')),
+    marks: check(m.querySelector('.marks, .mseg, .marks-old')),
+  };
+}
+function measureAs(over, phone){
+  const box = document.getElementById('measure'), saved = {...S};
+  Object.assign(S, over);
+  box.innerHTML = `<div class="mock ${phone?'phone':'desk'}">${R[S.v](phone)}</div>`;
+  const r = probe(box.firstElementChild, phone);
+  Object.assign(S, saved); box.innerHTML = '';
+  return r;
+}
+const mark = r => !r ? '—' : r.fixed ? '✓ 固定' : r.ok ? '<span class="good">✓</span>' : r.out ? '<span class="bad">✗</span> 畫面外' : `<span class="bad">✗</span> 切 ${r.cut}px`;
+function table(){
+  const names = {now:'現在', A:'A 底部', B:'B 頂部', C:'C 合併', D:'D 固定列'};
+  let h = `<tr><th rowspan="2">方案</th><th colspan="7">桌機 1280×900</th><th colspan="7">手機 375×812</th></tr><tr>`;
+  h += '<th>字幕群</th><th>以下<br>本機</th><th>以下<br>2 筆</th><th>以下<br>正式站</th><th>定位後<br>前後跳</th><th>定位後<br>標記鈕</th><th>定位後<br>影片露出</th>'.repeat(2) + '</tr>';
+  for (const v of Object.keys(names)){
+    h += `<tr${v===S.v?' class="pick"':''}><td><b>${names[v]}</b></td>`;
+    for (const phone of [false,true]){
+      const a = measureAs({v,e:'dev',m:0}, phone), b = measureAs({v,e:'dev',m:1}, phone), p = measureAs({v,e:'prod',m:0}, phone);
+      const dk = r => r.dock ? `＋固定列 ${r.dock}` : '';
+      h += `<td class="n">${a.card}</td><td class="n">${a.below}${dk(a)}</td><td class="n">${b.below}</td><td class="n">${p.below}</td><td class="n">${v==='now'?'—（沒有）':mark(a.seek)}</td><td class="n">${mark(a.marks)}</td><td class="n">${a.player[0]} / ${a.player[1]}</td>`;
+    }
+    h += '</tr>';
+  }
+  document.getElementById('cmp').innerHTML = h;
+}
+
+// 第三節：四組前後跳放在 A 的底部列
+function skGrid(){
+  const g = document.getElementById('sk-grid');
+  g.innerHTML = Object.entries(SK).map(([k,c])=>`<p class="label" style="margin-top:18px">${c.name}</p>
+    <div style="max-width:864px"><div class="vp" data-w="864"><div class="mock desk">${card(transport(false, marksFull(), k))}</div></div></div>
+    <div style="max-width:343px"><div class="vp" data-w="343"><div class="mock phone">${card(transport(true, marksFull(), k))}</div></div></div>`).join('');
+  // 量寬度（vp 還沒縮放前量）
+  let h = '<tr><th>按鈕組</th><th>桌機 前後跳寬</th><th>桌機 同一列</th><th>手機 前後跳寬 / 可用 309</th><th>手機 前後跳自己折行</th><th>手機 同一列</th></tr>';
+  const mocks = [...g.querySelectorAll('.mock')];
+  Object.entries(SK).forEach(([k,c],i)=>{
+    const res = [mocks[2*i], mocks[2*i+1]].map(m=>{
+      const tr = m.querySelector('.transport'), s = m.querySelector('.seek'), mk = m.querySelector('.marks');
+      const w = Math.round(m.querySelector(c.shift?'.sgrp, .seek':'.seek').getBoundingClientRect().width);
+      return {w, one: Math.abs(s.offsetTop - mk.offsetTop) < 4, wrap: s.offsetHeight > 36, avail: tr.clientWidth};
+    });
+    h += `<tr${k==='5_15'?' class="pick"':''}><td><b>${c.name}</b></td><td class="n">${res[0].w}</td><td>${res[0].one?'是':'否'}</td><td class="n">${res[1].w} / ${res[1].avail}</td><td>${res[1].wrap?'<span class="bad">會</span>':'<span class="good">不會</span>'}</td><td>${res[1].one?'是':'否（標記鈕第二行）'}</td></tr>`;
+  });
+  document.getElementById('sk-cmp').innerHTML = h;
+}
+
+function render(){
+  document.getElementById('m-desk').innerHTML = R[S.v](false);
+  document.getElementById('m-phone').innerHTML = R[S.v](true);
+  for (const id of ['m-desk','m-phone']) document.getElementById(id).style.transform = 'none'; // 量的時候不能帶著上次的縮放
+  skGrid();
+  const a = probe(document.getElementById('m-desk'), false), b = probe(document.getElementById('m-phone'), true);
+  document.getElementById('h-note').textContent =
+    `量到（未縮放）：桌機 字幕群 ${a.card}px、字幕群以下 ${a.below}px；手機 字幕群 ${b.card}px、字幕群以下 ${b.below}px${b.dock?`、固定列 ${b.dock}px`:''}。`;
+  table();
+  fit();
+}
+// 先量、再縮放（docs/agent-workflow.md §3）
+function fit(){
+  document.querySelectorAll('.vp').forEach(vp=>{
+    const m = vp.firstElementChild; m.style.transform='none';
+    const w = +vp.dataset.w, k = Math.min(1, vp.clientWidth / w);
+    const fullH = m.offsetHeight;
+    m.style.transform = `scale(${k})`;
+    vp.style.height = (Math.ceil(fullH*k)+1)+'px';
+  });
+}
+function tabs(id, key){
+  document.getElementById(id).addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    for (const x of e.currentTarget.children) x.setAttribute('aria-pressed', x===b);
+    const v = b.dataset[key]; S[key] = key==='m' ? +v : v; render();
+  });
+}
+tabs('t-ver','v'); tabs('t-env','e'); tabs('t-marks','m'); tabs('t-sk','sk');
+
+// 前後跳：點一下 ±d；Shift 點或長按（只有 data-hold 那組）＝ ±15
+let held = false, holdTimer = null;
+const seekBy = d => { S.t = Math.max(0, S.t + d); render(); };
+document.addEventListener('pointerdown', e=>{
+  const b = e.target.closest('.seek button[data-hold]'); if(!b) return;
+  held = false;
+  holdTimer = setTimeout(()=>{ held = true; seekBy(Math.sign(+b.dataset.d)*15); }, 450);
+});
+document.addEventListener('pointerup', ()=>clearTimeout(holdTimer));
+document.addEventListener('pointercancel', ()=>clearTimeout(holdTimer));
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.seek button'); if(!b) return;
+  if (held) { held = false; return; }
+  const d = +b.dataset.d;
+  seekBy(b.hasAttribute('data-hold') && e.shiftKey ? Math.sign(d)*15 : d);
+});
+addEventListener('resize', fit);
+render();
+document.fonts.ready.then(render);
+
+// 白線：兩邊同一份資料，只差 transition
+let base = 0;
+function wl(){
+  for (const id of ['wl-a','wl-b']){
+    const box = document.querySelector('#'+id+' .rows');
+    // 跟 React 一樣用 key：留下的列不搬動（搬動會重置 transition），只刪掉上面那列、在底下補一列
+    const want = LINES.slice(base, base+3).concat(LINES.slice(0, Math.max(0, base+3-LINES.length))).map(l=>l[0]);
+    for (const n of [...box.children]) if (!want.includes(n.dataset.k)) n.remove();
+    for (const k of want) if (![...box.children].some(n=>n.dataset.k===k)) {
+      const t=document.createElement('div'); t.innerHTML=row(LINES.find(l=>l[0]===k),false);
+      const n=t.firstElementChild; n.dataset.k=k; box.append(n);
+    }
+    [...box.children].forEach((n,k)=>n.classList.toggle('active',k===1));
+  }
+}
+wl();
+document.getElementById('wl-step').onclick = ()=>{ base=(base+1)%LINES.length; wl(); };
+let timer=null;
+document.getElementById('wl-auto').onclick = e=>{
+  if(timer){clearInterval(timer);timer=null;e.target.textContent='自動播放';return;}
+  timer=setInterval(()=>{base=(base+1)%LINES.length;wl();},2200); e.target.textContent='停止';
+};
+document.getElementById('wl-slow').onchange = e=>{
+  for (const id of ['wl-a','wl-b']) document.getElementById(id).classList.toggle('slow', e.target.checked);
+};
+</script>
+</body>
+</html>
