@@ -181,7 +181,28 @@ export function MarkTags({ tools, i }: { tools: SpeakerTools; i: number }) {
 }
 
 const btn = 'inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:border-zinc-400 dark:hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap';
-const kbd = 'font-mono text-[11px] px-1.5 rounded border border-zinc-300 dark:border-zinc-600 border-b-2';
+const kbd = 'font-mono text-[11px] leading-4 px-1.5 rounded border border-zinc-300 dark:border-zinc-600 border-b-2';
+const MARK_KEYS: [MarkType, string, string][] = [['start', '[', '起點'], ['end', ']', '終點'], ['one', 'S', '單句'], ['check', '?', '待查']];
+
+// 字幕群標題列上的四顆標記鈕；手機沒有鍵盤、也不在手機上校對，不顯示
+export function MarkButtons({ tools }: { tools: SpeakerTools }) {
+  if (!tools.enabled) return null;
+  return (
+    <span className="hidden sm:inline-flex items-stretch rounded-[10px] border border-dashed border-indigo-300 dark:border-indigo-700 divide-x divide-dashed divide-indigo-300 dark:divide-indigo-700 bg-white dark:bg-zinc-900 overflow-hidden">
+      {MARK_KEYS.map(([t, k, label]) => (
+        <button
+          key={t}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); tools.addMark(t); }}
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-[background-color] whitespace-nowrap"
+          title={`${MK[t]}（快捷鍵 ${k}，本機才有）`}
+        >
+          <span className={kbd}>{k}</span>{label}
+        </button>
+      ))}
+    </span>
+  );
+}
 
 export function SpeakerPanel({ tools, lines, onSeek, onFix }: {
   tools: SpeakerTools;
@@ -206,16 +227,20 @@ export function SpeakerPanel({ tools, lines, onSeek, onFix }: {
     <button type="button" onClick={() => tools.remove(g.ms.map(m => m.id))} className={`${btn} px-2 border-transparent bg-transparent dark:bg-transparent`} aria-label="刪除標記"><X size={14} /></button>
   );
 
+  // 提示訊息獨立於清單：寫回後清單收起來，訊息還要看得到
+  const toast = tools.toast && (
+    <div key={tools.toast.n} role="status" className="fixed left-1/2 bottom-6 -translate-x-1/2 z-[60] bg-zinc-900 text-white text-sm px-4 py-2 rounded-xl shadow-xl pointer-events-none">
+      {tools.toast.text}
+    </div>
+  );
+  // 沒有標記、沒有未寫回、也沒有可復原的，就不佔版面
+  if (!tools.marks.length && !changed.length && !tools.canUndo) return toast;
+
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">本機才有</span>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">標記正在播的這列，不會暫停：</span>
-        {(['start', 'end', 'one', 'check'] as MarkType[]).map(t => (
-          <button key={t} type="button" onClick={() => tools.addMark(t)} className={btn} title={`快捷鍵 ${Object.keys(KEYS).find(k => KEYS[k] === t)}`}>
-            <span className={kbd}>{({ start: '[', end: ']', one: 'S', check: '?' })[t]}</span>{MK[t]}
-          </button>
-        ))}
+    <div className="hidden sm:flex bg-white dark:bg-zinc-900 border border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-4 flex-col gap-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-bold text-indigo-600 dark:text-indigo-400">本機才有</span>
+        <span className="text-zinc-500 dark:text-zinc-400">{tools.marks.length} 筆標記</span>
       </div>
 
       {groups.length > 0 && (
@@ -261,11 +286,7 @@ export function SpeakerPanel({ tools, lines, onSeek, onFix }: {
         </pre>
       )}
 
-      {tools.toast && (
-        <div key={tools.toast.n} role="status" className="fixed left-1/2 bottom-6 -translate-x-1/2 z-[60] bg-zinc-900 text-white text-sm px-4 py-2 rounded-xl shadow-xl pointer-events-none">
-          {tools.toast.text}
-        </div>
-      )}
+      {toast}
     </div>
   );
 }

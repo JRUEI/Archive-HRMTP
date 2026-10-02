@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
-import { Search, Play, X, FileText, Crosshair } from 'lucide-react';
-import { useSpeakerTools, SpeakerPanel, MarkTags } from './SpeakerMarks';
+import { Search, X, FileText, Crosshair } from 'lucide-react';
+import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons } from './SpeakerMarks';
 
 // 只宣告這裡用得到的 YouTube IFrame API
 interface YTPlayer {
@@ -24,6 +24,10 @@ declare global {
 }
 
 const GROUP_SIZE_KEY = 'harumatope_transcript_groupsize_v2';
+
+// 時間戳：MM:SS 固定 5 字，給固定寬讓每列內文左緣對齊；高 22px 等於人名標籤的高
+const TIME_TAG = 'shrink-0 inline-flex items-center justify-center w-12 h-[22px] rounded-md border font-mono text-xs font-bold transition-colors';
+const SEEK_BTN = 'h-8 px-2.5 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-[background-color]';
 
 // 時間字串轉換為秒數 (支援 MM:SS 或 HH:MM:SS)
 function timeToSeconds(timeStr: string): number {
@@ -192,6 +196,16 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
       setActiveIndex(targetIdx);
     }
   }, []);
+
+  // 往前／往後跳幾秒：跟 YouTube 的 ← → 一樣，不改變播放或暫停
+  const seekBy = useCallback((delta: number) => {
+    const player = playerRef.current;
+    const now = typeof player?.getCurrentTime === 'function' ? player.getCurrentTime() : currentTime;
+    const sec = Math.max(0, now + delta);
+    player?.seekTo(sec, true);
+    setCurrentTime(sec);
+    setActiveIndex(findActiveIndex(sec));
+  }, [currentTime, findActiveIndex]);
 
   // 立即平滑滾動定位至當前播放句（免手動滑動滾輪）
   const scrollToActive = useCallback(() => {
@@ -375,12 +389,26 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
             className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-lg flex flex-col gap-2.5"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
-              <span className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                即時字幕群 ({groupSize}句同步)
-              </span>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-[11px] text-zinc-400">顯示句數：</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* 前後跳：−15 −5 目前時間 +5 +15 */}
+                <div className="inline-flex items-stretch rounded-[10px] border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/40 divide-x divide-emerald-200 dark:divide-emerald-800/50 overflow-hidden">
+                  {[-15, -5].map((d) => (
+                    <button key={d} type="button" onClick={() => seekBy(d)} className={SEEK_BTN} title={`往前 ${-d} 秒`} aria-label={`往前 ${-d} 秒`}>
+                      −{-d}
+                    </button>
+                  ))}
+                  <span className="flex items-center px-2.5 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400" title="目前進度">
+                    {formatSeconds(currentTime)}
+                  </span>
+                  {[5, 15].map((d) => (
+                    <button key={d} type="button" onClick={() => seekBy(d)} className={SEEK_BTN} title={`往後 ${d} 秒`} aria-label={`往後 ${d} 秒`}>
+                      +{d}
+                    </button>
+                  ))}
+                </div>
+                <MarkButtons tools={speakerTools} />
+              </div>
+              <div className="flex items-center">
                 <div className="inline-flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60">
                   {[1, 2, 3, 4, 5].map((num) => (
                     <button
@@ -397,7 +425,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                       }`}
                       title={`字幕群顯示 ${num} 句`}
                     >
-                      {num}句
+                      {num}<span className="hidden sm:inline">句</span>
                     </button>
                   ))}
                 </div>
@@ -413,18 +441,16 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                   <div
                     key={line.index}
                     onClick={() => seekTo(line.seconds, line.index)}
-                    className="group py-2.5 sm:py-3 px-2 sm:px-3 flex items-start gap-3 sm:gap-4 rounded-xl cursor-pointer hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-all duration-200"
+                    // 只讓底色有動畫：transition-all 會連分隔線一起漸變，字幕往上推時新長出的線會從白色淡入（閃白線）
+                    className="group py-2.5 sm:py-3 px-2 sm:px-3 flex items-start gap-3 sm:gap-4 rounded-xl cursor-pointer hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-[background-color] duration-200"
                   >
-                    {/* 時間戳播放按鈕 */}
-                    <div className="shrink-0 pt-0.5">
-                      <span
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono text-xs font-semibold bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/60 group-hover:bg-emerald-500 group-hover:text-zinc-950 group-hover:border-emerald-400 transition-all shadow-sm"
-                        title="點擊跳轉影片至此秒數"
-                      >
-                        <Play size={10} className="fill-current" />
-                        <span>{line.time}</span>
-                      </span>
-                    </div>
+                    {/* 時間戳：固定寬，高度跟人名標籤一樣，兩者中線對齊 */}
+                    <span
+                      className={`${TIME_TAG} bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/60 group-hover:bg-emerald-500 group-hover:text-zinc-950 group-hover:border-emerald-400`}
+                      title="點擊跳轉影片至此秒數"
+                    >
+                      {line.time}
+                    </span>
 
                     {/* 對話內文 */}
                     <div className="flex-1 min-w-0">
@@ -458,15 +484,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
         >
           
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-            {/* 播放進度 */}
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <span className="text-zinc-500 dark:text-zinc-400">目前進度:</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/40">
-                {formatSeconds(currentTime)}
-              </span>
-            </div>
-
-            {/* API 連線標籤 */}
+            {/* API 連線標籤（目前進度已移到字幕群標題列的前後跳中間） */}
             <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/40">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>{isPlayerReady ? '雙向同步連動中' : '連線播放器中...'}</span>
@@ -484,9 +502,9 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* 字幕群開關 */}
-            <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white">
+            <label className="flex items-center gap-2 cursor-pointer select-none whitespace-nowrap text-xs text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white">
               <input
                 type="checkbox"
                 checked={showOverlay}
@@ -499,7 +517,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
             {/* 展開抽屜主按鈕 */}
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2 rounded-xl transition shadow-md hover:scale-105"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2 rounded-xl transition shadow-md hover:scale-105"
             >
               <Search size={14} />
               <span>展開完整逐字稿與搜尋 ({parsedLines.length} 句)</span>
@@ -669,20 +687,17 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                     : 'border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
                 }`}
               >
-                {/* 時間戳播放按鈕 */}
-                <div className="shrink-0 pt-0.5">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition-all ${
-                      isActive
-                        ? 'bg-emerald-500 text-white dark:bg-emerald-400 dark:text-zinc-950 shadow-md'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:bg-emerald-400 dark:group-hover:text-zinc-950'
-                    }`}
-                    title="點擊跳轉影片至此秒數"
-                  >
-                    <Play size={10} className="fill-current" />
-                    <span>{line.time}</span>
-                  </span>
-                </div>
+                {/* 時間戳 */}
+                <span
+                  className={`${TIME_TAG} ${
+                    isActive
+                      ? 'bg-emerald-500 text-white dark:bg-emerald-400 dark:text-zinc-950 border-transparent'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-transparent group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:bg-emerald-400 dark:group-hover:text-zinc-950'
+                  }`}
+                  title="點擊跳轉影片至此秒數"
+                >
+                  {line.time}
+                </span>
 
                 {/* 對話內文 */}
                 <div className="flex-1 min-w-0">
