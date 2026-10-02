@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
-import { Search, X, FileText, Crosshair } from 'lucide-react';
+import { Search, X, FileText, Crosshair, Clock } from 'lucide-react';
 import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons } from './SpeakerMarks';
 
 // 只宣告這裡用得到的 YouTube IFrame API
@@ -24,6 +24,7 @@ declare global {
 }
 
 const GROUP_SIZE_KEY = 'harumatope_transcript_groupsize_v2';
+const SHOW_TIME_KEY = 'harumatope_transcript_showtime_v1';
 
 // 時間戳：MM:SS 固定 5 字，給固定寬讓每列內文左緣對齊；高 22px 等於人名標籤的高
 const TIME_TAG = 'shrink-0 inline-flex items-center justify-center w-12 h-[22px] rounded-md border font-mono text-xs font-bold transition-colors';
@@ -84,6 +85,26 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
     } catch {
       // 記不住就算了，不影響本次操作
     }
+  }, []);
+
+  // 時間標開關（字幕群與抽屜一起），預設顯示
+  const [showTime, setShowTime] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(SHOW_TIME_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleShowTime = useCallback(() => {
+    setShowTime((v) => {
+      try {
+        window.localStorage.setItem(SHOW_TIME_KEY, v ? '0' : '1');
+      } catch {
+        // 記不住就算了
+      }
+      return !v;
+    });
   }, []);
 
   const playerRef = useRef<YTPlayer | null>(null);
@@ -408,7 +429,21 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                 </div>
                 <MarkButtons tools={speakerTools} />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleShowTime}
+                  aria-pressed={showTime}
+                  title={showTime ? '隱藏時間標' : '顯示時間標'}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border font-mono text-xs font-bold transition-colors ${
+                    showTime
+                      ? 'bg-emerald-500 text-white border-emerald-500 dark:bg-emerald-400 dark:text-zinc-950 dark:border-emerald-400'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/60 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  時間
+                </button>
                 <div className="inline-flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60">
                   {[1, 2, 3, 4, 5].map((num) => (
                     <button
@@ -445,12 +480,14 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                     className="group py-2.5 sm:py-3 px-2 sm:px-3 flex items-start gap-3 sm:gap-4 rounded-xl cursor-pointer hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-[background-color] duration-200"
                   >
                     {/* 時間戳：固定寬，高度跟人名標籤一樣，兩者中線對齊 */}
-                    <span
-                      className={`${TIME_TAG} bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/60 group-hover:bg-emerald-500 group-hover:text-zinc-950 group-hover:border-emerald-400`}
-                      title="點擊跳轉影片至此秒數"
-                    >
-                      {line.time}
-                    </span>
+                    {showTime && (
+                      <span
+                        className={`${TIME_TAG} bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/60 group-hover:bg-emerald-500 group-hover:text-zinc-950 group-hover:border-emerald-400`}
+                        title="點擊跳轉影片至此秒數"
+                      >
+                        {line.time}
+                      </span>
+                    )}
 
                     {/* 對話內文 */}
                     <div className="flex-1 min-w-0">
@@ -688,16 +725,18 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                 }`}
               >
                 {/* 時間戳 */}
-                <span
-                  className={`${TIME_TAG} ${
-                    isActive
-                      ? 'bg-emerald-500 text-white dark:bg-emerald-400 dark:text-zinc-950 border-transparent'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-transparent group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:bg-emerald-400 dark:group-hover:text-zinc-950'
-                  }`}
-                  title="點擊跳轉影片至此秒數"
-                >
-                  {line.time}
-                </span>
+                {showTime && (
+                  <span
+                    className={`${TIME_TAG} ${
+                      isActive
+                        ? 'bg-emerald-500 text-white dark:bg-emerald-400 dark:text-zinc-950 border-transparent'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-transparent group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:bg-emerald-400 dark:group-hover:text-zinc-950'
+                    }`}
+                    title="點擊跳轉影片至此秒數"
+                  >
+                    {line.time}
+                  </span>
+                )}
 
                 {/* 對話內文 */}
                 <div className="flex-1 min-w-0">
