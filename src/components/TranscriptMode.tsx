@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
 import { Search, Play, X, FileText, Crosshair } from 'lucide-react';
+import { useSpeakerTools, SpeakerPanel, MarkTags } from './SpeakerMarks';
 
 // 只宣告這裡用得到的 YouTube IFrame API
 interface YTPlayer {
@@ -139,13 +140,20 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
     }));
   }, [episode.transcript]);
 
+  // 本機開發時的說話者標記與修正（正式站 enabled 為 false，什麼都不畫）
+  const speakerTools = useSpeakerTools(episode.id, parsedLines, activeIndex);
+  const shownLines = useMemo(
+    () => (speakerTools.enabled ? parsedLines.map(l => ({ ...l, speaker: speakerTools.speakers[l.index] })) : parsedLines),
+    [parsedLines, speakerTools.enabled, speakerTools.speakers],
+  );
+
   // 正下方顯示的即時字幕群（預設 4 句，目前 timecode 對應第二句，容錯時間延遲並方便提前預讀）
   const currentGroupLines = useMemo(() => {
-    if (parsedLines.length === 0) return [];
+    if (shownLines.length === 0) return [];
     const offset = groupSize >= 2 ? 1 : 0;
     const baseIdx = Math.max(0, activeIndex >= 0 ? activeIndex - offset : 0);
-    return parsedLines.slice(baseIdx, baseIdx + groupSize);
-  }, [parsedLines, activeIndex, groupSize]);
+    return shownLines.slice(baseIdx, baseIdx + groupSize);
+  }, [shownLines, activeIndex, groupSize]);
 
   // 二分查找當前秒數落在哪一句話
   const findActiveIndex = useCallback((time: number): number => {
@@ -338,7 +346,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
   }
 
   // 搜尋過濾
-  const filteredLines = parsedLines.filter(line => {
+  const filteredLines = shownLines.filter(line => {
     if (!searchKeyword.trim()) return true;
     const kw = searchKeyword.toLowerCase();
     return line.text.toLowerCase().includes(kw) || line.speaker.toLowerCase().includes(kw);
@@ -430,6 +438,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                         >
                           {line.speaker}
                         </span>
+                        <MarkTags tools={speakerTools} i={line.index} />
                       </div>
                       <p className="text-sm sm:text-base leading-relaxed m-0 text-zinc-900 dark:text-zinc-100 font-medium">
                         {line.text}
@@ -498,6 +507,13 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
           </div>
 
         </div>
+
+        <SpeakerPanel
+          tools={speakerTools}
+          lines={parsedLines}
+          onSeek={(i) => seekTo(parsedLines[i].seconds, i)}
+          onFix={(i) => { seekTo(parsedLines[i].seconds, i); setIsDrawerOpen(true); }}
+        />
 
       </div>
 
@@ -672,14 +688,20 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span
+                      {...(speakerTools.enabled && {
+                        role: 'button',
+                        title: '點一下換人（本機才有）',
+                        onClick: (e: React.MouseEvent) => { e.stopPropagation(); speakerTools.cycle(line.index); },
+                      })}
                       className={`font-bold text-xs px-2 py-0.5 rounded-full border ${
                         isHost
                           ? 'bg-purple-500/10 text-brand-purple border-purple-500/20'
                           : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                      }`}
+                      } ${speakerTools.enabled ? 'hover:border-dashed hover:border-current' : ''}`}
                     >
                       {line.speaker}
                     </span>
+                    <MarkTags tools={speakerTools} i={line.index} />
                   </div>
                   <p className={`text-sm sm:text-base leading-relaxed m-0 transition-colors ${
                     isActive

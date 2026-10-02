@@ -28,6 +28,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: isGithubActions ? 'export' : undefined,
+  // *.dev.ts 是本機才有的路由（寫回逐字稿說話者），正式站建置時不認
+  ...(isGithubActions ? {} : { pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'dev.ts'] }),
   basePath: isGithubActions ? `/${repoName}` : '',
   trailingSlash: true,
   images: {

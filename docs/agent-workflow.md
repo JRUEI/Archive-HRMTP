@@ -98,7 +98,11 @@ node scripts/card-probe.mjs [輸出.json] [1-12]   # 每集一行：內容卡張
 ## 6. 不可亂動
 
 - `src/components/TranscriptMode.tsx` 的 `const isHost = line.speaker === '福嶋晴菜';`
-  （目前 402 與 638 行，字幕群與抽屜各一處）是承重的，改名會讓主持人樣式整組失效。
+  （目前 410 與 654 行，字幕群與抽屜各一處）是承重的，改名會讓主持人樣式整組失效。
+- 說話者標記工具（`SpeakerMarks.tsx` + `src/app/api/speakers/route.dev.ts`）只在 `npm run dev` 出現。
+  `.dev.ts` 靠 `next.config.ts` 的 `pageExtensions` 才被當成路由，而且**只能在非 GitHub Actions 時設定**：
+  `GITHUB_ACTIONS=1` 建置時就算寫成預設值 `['tsx','ts','jsx','js']`，Turbopack 也會噴 324 個
+  `next/font/google queries have exactly one entry` 而失敗。
 - 品牌色只能改 `src/app/globals.css` 的 `:root` 變數（`--color-brand-purple` / `--color-brand-green`，
   light/dark 兩組），**不准寫死在 component 裡**。
 - 時間碼統一 `MM:SS`。`timeToSeconds()` 兩種格式都吃，但顯示端只輸出 `MM:SS`，
