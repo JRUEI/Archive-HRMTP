@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
-import { Search, X, FileText, Crosshair, Clock } from 'lucide-react';
+import { Search, X, FileText, Crosshair, Clock, ArrowLeftRight } from 'lucide-react';
 import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons } from './SpeakerMarks';
 
 // 只宣告這裡用得到的 YouTube IFrame API
@@ -25,6 +25,30 @@ declare global {
 
 const GROUP_SIZE_KEY = 'harumatope_transcript_groupsize_v2';
 const SHOW_TIME_KEY = 'harumatope_transcript_showtime_v1';
+const BAR_FLIP_KEY = 'harumatope_transcript_barflip_v1';
+
+// 記在 localStorage 的開關；讀寫失敗（無痕、停用 Cookie）就只在本次有效
+function useStoredFlag(key: string, initial: boolean): [boolean, () => void] {
+  const [on, setOn] = useState<boolean>(() => {
+    try {
+      const v = window.localStorage.getItem(key);
+      return v === null ? initial : v === '1';
+    } catch {
+      return initial;
+    }
+  });
+  const toggle = useCallback(() => {
+    setOn((v) => {
+      try {
+        window.localStorage.setItem(key, v ? '0' : '1');
+      } catch {
+        // 記不住就算了
+      }
+      return !v;
+    });
+  }, [key]);
+  return [on, toggle];
+}
 
 // 時間戳：MM:SS 固定 5 字，給固定寬讓每列內文左緣對齊；高 22px 等於人名標籤的高
 const TIME_TAG = 'shrink-0 inline-flex items-center justify-center w-12 h-[22px] rounded-md border font-mono text-xs font-bold transition-colors';
@@ -88,24 +112,9 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
   }, []);
 
   // 時間標開關（字幕群與抽屜一起），預設顯示
-  const [showTime, setShowTime] = useState<boolean>(() => {
-    try {
-      return window.localStorage.getItem(SHOW_TIME_KEY) !== '0';
-    } catch {
-      return true;
-    }
-  });
-
-  const toggleShowTime = useCallback(() => {
-    setShowTime((v) => {
-      try {
-        window.localStorage.setItem(SHOW_TIME_KEY, v ? '0' : '1');
-      } catch {
-        // 記不住就算了
-      }
-      return !v;
-    });
-  }, []);
+  const [showTime, toggleShowTime] = useStoredFlag(SHOW_TIME_KEY, true);
+  // 字幕群設定列左右對調：視窗貼螢幕邊、旁邊並排別的視窗時，把前後跳移到靠近的那一側
+  const [barFlip, toggleBarFlip] = useStoredFlag(BAR_FLIP_KEY, false);
 
   const playerRef = useRef<YTPlayer | null>(null);
   const theaterRef = useRef<HTMLDivElement | null>(null);
@@ -410,9 +419,9 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
         {showOverlay && currentGroupLines.length > 0 && (
           <div
             id="transcript-subtitle-group"
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-lg flex flex-col gap-2.5"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 sm:pt-4 shadow-lg flex flex-col gap-2.5"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
+            <div className={`flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pb-4 border-b${barFlip ? ' sm:flex-row-reverse' : ''} border-zinc-100 dark:border-zinc-800/80`}>
               <div className="flex flex-wrap items-center gap-2">
                 {/* 前後跳：−15 −5 目前時間 +5 +15 */}
                 <div className="inline-flex items-stretch rounded-[10px] border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/40 divide-x divide-emerald-200 dark:divide-emerald-800/50 overflow-hidden">
@@ -433,6 +442,16 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                 <MarkButtons tools={speakerTools} />
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleBarFlip}
+                  aria-pressed={barFlip}
+                  title="設定列左右對調"
+                  aria-label="設定列左右對調"
+                  className="hidden sm:inline-flex items-center px-1.5 py-1 rounded-lg border bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/60 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                </button>
                 <button
                   type="button"
                   onClick={toggleShowTime}
