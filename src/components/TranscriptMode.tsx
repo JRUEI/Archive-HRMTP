@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { EpisodeData } from '@/lib/markdown';
 import { Search, X, FileText, Crosshair, Clock, ArrowLeftRight } from 'lucide-react';
-import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons } from './SpeakerMarks';
+import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons, MarkMenu } from './SpeakerMarks';
 
 // 只宣告這裡用得到的 YouTube IFrame API
 interface YTPlayer {
@@ -499,6 +499,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                   <div
                     key={line.index}
                     onClick={() => seekTo(line.seconds, line.index)}
+                    onContextMenu={(e) => speakerTools.openMenu(e, line.index)}
                     // 只讓底色有動畫：transition-all 會連分隔線一起漸變，字幕往上推時新長出的線會從白色淡入（閃白線）
                     className="group py-2.5 sm:py-3 px-2 sm:px-3 flex items-start gap-3 sm:gap-4 rounded-xl cursor-pointer hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-[background-color] duration-200"
                   >
@@ -588,6 +589,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
 
         </div>
 
+        <MarkMenu tools={speakerTools} />
         <SpeakerPanel
           tools={speakerTools}
           lines={parsedLines}
@@ -744,6 +746,7 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                   lineRefs.current[line.index] = el;
                 }}
                 onClick={() => seekTo(line.seconds, line.index)}
+                onContextMenu={(e) => speakerTools.openMenu(e, line.index)}
                 className={`group flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-all duration-200 border ${
                   isActive
                     ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50/90 dark:bg-emerald-500/10 shadow-[0_0_16px_rgba(52,211,153,0.12)]'

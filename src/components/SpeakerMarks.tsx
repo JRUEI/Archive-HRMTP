@@ -3,7 +3,7 @@
 // 邊聽邊標說話者錯誤，聽完一次套用、寫回 Markdown。只在本機 npm run dev 出現。
 // 寫回走 src/app/api/speakers/route.dev.ts，正式站（靜態匯出）沒有這支 API。
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { TranscriptLine } from '@/lib/markdown';
 
 export const SPEAKER_TOOLS = process.env.NODE_ENV === 'development';
@@ -64,7 +64,11 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
     if (!SPEAKER_TOOLS) return [];
     try {
       const saved = JSON.parse(window.localStorage.getItem(storeKey) ?? '[]') as { type: MarkType; i: number; t: string }[];
-      return saved.filter(m => lines[m.i]?.time === m.t).map(m => ({ type: m.type, i: m.i, id: seq++ }));
+      // 同一列同一種只留一筆（舊版會重複存）
+      const seen = new Set<string>();
+      return saved
+        .filter(m => lines[m.i]?.time === m.t && !seen.has(`${m.type}@${m.i}`) && seen.add(`${m.type}@${m.i}`))
+        .map(m => ({ type: m.type, i: m.i, id: seq++ }));
     } catch {
       return [];
     }
@@ -88,12 +92,37 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
   const activeRef = useRef(activeIndex);
   useEffect(() => { activeRef.current = activeIndex; }, [activeIndex]);
 
-  const addMark = useCallback((type: MarkType) => {
-    const i = activeRef.current;
+  // 沒給列就標正在播的那列；同一列已有同一種標記就是取消，不會重複
+  const marksRef = useRef(marks);
+  useEffect(() => { marksRef.current = marks; }, [marks]);
+  const addMark = useCallback((type: MarkType, at?: number) => {
+    const i = at ?? activeRef.current;
     if (i < 0) { say('影片還沒開始播'); return; }
-    setMarks(ms => [...ms, { type, i, id: seq++ }]);
-    say(`${lines[i].time} ${MK[type]}`);
+    const has = marksRef.current.some(m => m.type === type && m.i === i);
+    setMarks(ms => (has ? ms.filter(m => !(m.type === type && m.i === i)) : [...ms, { type, i, id: seq++ }]));
+    say(`${lines[i].time} ${has ? '取消' : ''}${MK[type]}`);
   }, [lines, say]);
+
+  // 右鍵選單：在哪一列按右鍵就標哪一列
+  const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null);
+  const openMenu = useCallback((e: React.MouseEvent, i: number) => {
+    if (!enabled) return;
+    e.preventDefault();
+    setMenu({ i, x: e.clientX, y: e.clientY });
+  }, [enabled]);
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menu]);
 
   // 邊聽邊按：[ 對調起點、] 對調終點、S 單句對調、? 待查，標的是正在播的那一列
   useEffect(() => {
@@ -156,7 +185,7 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
 
   return {
     enabled, speakers: cur, file, marks, groups, changed, toast, saving,
-    addMark, apply, cycle, save,
+    addMark, apply, cycle, save, menu, openMenu, closeMenu: () => setMenu(null),
     canUndo: undo.length > 0,
     undo: () => { if (undo.length) { setCur(undo[undo.length - 1]); setUndo(u => u.slice(0, -1)); } },
     nudge: (mid: number, d: number) => setMarks(ms => ms.map(m => (m.id === mid ? { ...m, i: Math.max(0, Math.min(lines.length - 1, m.i + d)) } : m))),
@@ -201,6 +230,40 @@ export function MarkButtons({ tools }: { tools: SpeakerTools }) {
         </button>
       ))}
     </span>
+  );
+}
+
+// 右鍵選單本體：已有的標記打勾，再點一次就取消
+export function MarkMenu({ tools }: { tools: SpeakerTools }) {
+  const m = tools.menu;
+  if (!tools.enabled || !m) return null;
+  const W = 168, H = 4 * 36 + 8;
+  return (
+    <div
+      role="menu"
+      onPointerDown={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
+      style={{ left: Math.min(m.x, window.innerWidth - W - 8), top: Math.min(m.y, window.innerHeight - H - 8), width: W }}
+      className="fixed z-[70] p-1 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900 shadow-xl flex flex-col"
+    >
+      {MARK_KEYS.map(([t, k]) => {
+        const on = tools.marks.some(x => x.type === t && x.i === m.i);
+        return (
+          <button
+            key={t}
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={on}
+            onClick={() => { tools.addMark(t, m.i); tools.closeMenu(); }}
+            className="flex items-center gap-2 h-9 px-2.5 rounded-lg text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-[background-color]"
+          >
+            <span className={kbd}>{k}</span>
+            <span className="flex-1 text-left">{MK[t]}</span>
+            {on && <Check size={14} className="text-indigo-500" />}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
