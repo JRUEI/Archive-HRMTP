@@ -442,7 +442,8 @@ export default function TranscriptMode({ episode }: { episode: EpisodeData }) {
                 </div>
                 <MarkButtons tools={speakerTools} />
               </div>
-              <div className="flex items-center gap-2">
+              {/* 這組跟左組相反：沒對調時反排，⇆ 才會貼在最外側，兩種排法互為鏡像 */}
+              <div className={`flex items-center gap-2${barFlip ? '' : ' sm:flex-row-reverse'}`}>
                 <button
                   type="button"
                   onClick={toggleBarFlip}
