@@ -303,6 +303,14 @@ function paginateCards(cards: EpisodeCard[]) {
   const paginated: PaginatedCard[] = [];
 
   cards.forEach(card => {
+    // 只超出一點點（字級縮 10% 內放得下）就縮字級塞成一張，不要為了幾十 px 切成兩張半空的
+    const wholeBudget = bodyBudget(card.title);
+    const wholeHeight = (s: number) => card.content.reduce((a, i) => a + blockHeight(i, s), 0);
+    const wholeScale = fitScale(wholeHeight, wholeBudget, 0.9);
+    if (wholeHeight(wholeScale) <= wholeBudget) {
+      paginated.push({ ...card, contentChunk: card.content, displayTitle: '', scale: wholeScale });
+      return;
+    }
     const { chunks, budget } = settle(card.title, b => evenChunks(card.content, b));
     chunks.forEach(chunk => {
       paginated.push({ ...card, contentChunk: chunk, displayTitle: '', scale: chunkScale(chunk, budget) });
