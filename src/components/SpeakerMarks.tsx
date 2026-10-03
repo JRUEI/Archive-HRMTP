@@ -3,7 +3,7 @@
 // 邊聽邊標說話者錯誤，聽完一次套用、寫回 Markdown。只在本機 npm run dev 出現。
 // 寫回走 src/app/api/speakers/route.dev.ts，正式站（靜態匯出）沒有這支 API。
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Play, X } from 'lucide-react';
 import type { TranscriptLine } from '@/lib/markdown';
 
 export const SPEAKER_TOOLS = process.env.NODE_ENV === 'development';
@@ -12,7 +12,7 @@ const HOST = '福嶋晴菜';
 const STAFF = '工作人員';
 
 type MarkType = 'start' | 'end' | 'one' | 'check';
-interface Mark { id: number; type: MarkType; i: number }
+interface Mark { id: number; type: MarkType; i: number; ok?: boolean } // ok：已聽過核對
 interface Group { kind: 'range' | 'one' | 'check' | 'warn'; ms: Mark[]; msg?: string }
 
 let seq = 0; // 標記的 id，只拿來當 key 和刪除用
@@ -63,12 +63,12 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
   const [marks, setMarks] = useState<Mark[]>(() => {
     if (!SPEAKER_TOOLS) return [];
     try {
-      const saved = JSON.parse(window.localStorage.getItem(storeKey) ?? '[]') as { type: MarkType; i: number; t: string }[];
+      const saved = JSON.parse(window.localStorage.getItem(storeKey) ?? '[]') as { type: MarkType; i: number; t: string; ok?: boolean }[];
       // 同一列同一種只留一筆（舊版會重複存）
       const seen = new Set<string>();
       return saved
         .filter(m => lines[m.i]?.time === m.t && !seen.has(`${m.type}@${m.i}`) && seen.add(`${m.type}@${m.i}`))
-        .map(m => ({ type: m.type, i: m.i, id: seq++ }));
+        .map(m => ({ type: m.type, i: m.i, ok: m.ok, id: seq++ }));
     } catch {
       return [];
     }
@@ -76,7 +76,7 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
   useEffect(() => {
     if (!enabled) return;
     try {
-      window.localStorage.setItem(storeKey, JSON.stringify(marks.map(m => ({ type: m.type, i: m.i, t: lines[m.i].time }))));
+      window.localStorage.setItem(storeKey, JSON.stringify(marks.map(m => ({ type: m.type, i: m.i, t: lines[m.i].time, ok: m.ok }))));
     } catch {
       // 記不住就算了，這次還是能用
     }
@@ -145,14 +145,17 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
     if (next.some((s, i) => s !== cur[i])) { setUndo(u => [...u, cur]); setCur(next); }
   }, [cur]);
 
+  // 有勾「已核對」就只套用勾了的，一個都沒勾才全部套用
   const apply = useCallback(() => {
     const idx: number[] = [];
-    for (const g of groups) {
+    const swappable = groups.filter(g => g.kind === 'range' || g.kind === 'one');
+    const picked = swappable.some(g => g.ms.every(m => m.ok)) ? swappable.filter(g => g.ms.every(m => m.ok)) : swappable;
+    for (const g of picked) {
       if (g.kind === 'range') for (let k = g.ms[0].i; k <= g.ms[1].i; k++) idx.push(k);
       if (g.kind === 'one') idx.push(g.ms[0].i);
     }
     edit(idx, swap); // 單句落在段落內會換兩次＝原樣，清單上已提醒
-    const used = new Set(groups.filter(g => g.kind === 'range' || g.kind === 'one').flatMap(g => g.ms.map(m => m.id)));
+    const used = new Set(picked.flatMap(g => g.ms.map(m => m.id)));
     setMarks(ms => ms.filter(m => !used.has(m.id)));
   }, [groups, edit, swap]);
 
@@ -188,7 +191,12 @@ export function useSpeakerTools(id: string, lines: TranscriptLine[], activeIndex
     addMark, apply, cycle, save, menu, openMenu, closeMenu: () => setMenu(null),
     canUndo: undo.length > 0,
     undo: () => { if (undo.length) { setCur(undo[undo.length - 1]); setUndo(u => u.slice(0, -1)); } },
-    nudge: (mid: number, d: number) => setMarks(ms => ms.map(m => (m.id === mid ? { ...m, i: Math.max(0, Math.min(lines.length - 1, m.i + d)) } : m))),
+    nudge: (mid: number, d: number) => setMarks(ms => ms.map(m => (m.id === mid ? { ...m, ok: false, i: Math.max(0, Math.min(lines.length - 1, m.i + d)) } : m))),
+    // 一組裡全部已核對就取消，否則全部標成已核對
+    toggleOk: (ids: number[]) => setMarks(ms => {
+      const all = ms.filter(m => ids.includes(m.id)).every(m => m.ok);
+      return ms.map(m => (ids.includes(m.id) ? { ...m, ok: !all } : m));
+    }),
     remove: (ids: number[]) => setMarks(ms => ms.filter(m => !ids.includes(m.id))),
   };
 }
@@ -209,27 +217,32 @@ export function MarkTags({ tools, i }: { tools: SpeakerTools; i: number }) {
   );
 }
 
-const btn = 'inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:border-zinc-400 dark:hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap';
+const btn = 'inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-[10px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:border-zinc-400 dark:hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap';
 const kbd = 'font-mono text-[11px] leading-4 px-1.5 rounded border border-zinc-300 dark:border-zinc-600 border-b-2';
 const MARK_KEYS: [MarkType, string, string][] = [['start', '[', '起點'], ['end', ']', '終點'], ['one', 'S', '單句'], ['check', '?', '待查']];
 
-// 字幕群標題列上的四顆標記鈕；手機沒有鍵盤、也不在手機上校對，不顯示
+// 影片下方獨立一條的標記列，外框、高度、按鈕跟上面的播放控制列（SubtitleToolbar）同款；
+// 只在本機開發版出現，視窗收窄也要看得到（右側提示文字才在窄版收起來）
 export function MarkButtons({ tools }: { tools: SpeakerTools }) {
   if (!tools.enabled) return null;
   return (
-    <span className="hidden sm:inline-flex items-stretch rounded-[10px] border border-dashed border-indigo-300 dark:border-indigo-700 divide-x divide-dashed divide-indigo-300 dark:divide-indigo-700 bg-white dark:bg-zinc-900 overflow-hidden">
+    <div role="group" aria-label="人工標記" className="flex h-11 items-center gap-0.5 px-1 rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <span className="max-sm:hidden px-2 text-[13px] font-bold text-zinc-700 dark:text-zinc-200 whitespace-nowrap">人工標記</span>
+      <span aria-hidden="true" className="max-sm:hidden mx-1 h-4 w-px shrink-0 bg-zinc-200 dark:bg-zinc-700" />
       {MARK_KEYS.map(([t, k, label]) => (
         <button
           key={t}
           type="button"
-          onClick={(e) => { e.stopPropagation(); tools.addMark(t); }}
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-[background-color] whitespace-nowrap"
+          onClick={() => tools.addMark(t)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-[10px] px-2 text-[13px] font-bold text-zinc-500 dark:text-zinc-400 transition hover:bg-brand-green/10 hover:text-emerald-700 dark:hover:text-brand-green whitespace-nowrap"
           title={`${MK[t]}（快捷鍵 ${k}，本機才有）`}
         >
           <span className={kbd}>{k}</span>{label}
         </button>
       ))}
-    </span>
+      <span className="min-w-0 flex-1" />
+      <span className="hidden sm:inline px-2 text-xs text-zinc-400 dark:text-zinc-500 whitespace-nowrap">標正在播的那句・本機才有</span>
+    </div>
   );
 }
 
@@ -244,7 +257,7 @@ export function MarkMenu({ tools }: { tools: SpeakerTools }) {
       onPointerDown={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
       style={{ left: Math.min(m.x, window.innerWidth - W - 8), top: Math.min(m.y, window.innerHeight - H - 8), width: W }}
-      className="fixed z-[70] p-1 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900 shadow-xl flex flex-col"
+      className="fixed z-[70] p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl flex flex-col"
     >
       {MARK_KEYS.map(([t, k]) => {
         const on = tools.marks.some(x => x.type === t && x.i === m.i);
@@ -255,11 +268,11 @@ export function MarkMenu({ tools }: { tools: SpeakerTools }) {
             role="menuitemcheckbox"
             aria-checked={on}
             onClick={() => { tools.addMark(t, m.i); tools.closeMenu(); }}
-            className="flex items-center gap-2 h-9 px-2.5 rounded-lg text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-[background-color]"
+            className="flex items-center gap-2 h-9 px-2.5 rounded-lg text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-brand-green/10 transition-[background-color]"
           >
             <span className={kbd}>{k}</span>
             <span className="flex-1 text-left">{MK[t]}</span>
-            {on && <Check size={14} className="text-indigo-500" />}
+            {on && <Check size={14} className="text-emerald-600 dark:text-brand-green" />}
           </button>
         );
       })}
@@ -277,17 +290,34 @@ export function SpeakerPanel({ tools, lines, onSeek, onFix }: {
   const { groups, changed } = tools;
   const ranges = groups.filter(g => g.kind === 'range').map(g => [g.ms[0].i, g.ms[1].i]);
   const inRange = (i: number) => ranges.some(([a, b]) => i >= a && i <= b);
-  const ready = groups.filter(g => g.kind === 'range' || g.kind === 'one').length;
+  const swappable = groups.filter(g => g.kind === 'range' || g.kind === 'one');
+  const ready = swappable.length;
+  const readyOk = swappable.filter(g => g.ms.every(m => m.ok)).length; // 勾了的才套用；一個都沒勾就全部
 
+  const okCount = groups.filter(g => g.ms.every(m => m.ok)).length;
   const nud = (m: Mark) => (
     <span className="inline-flex items-center">
       <button type="button" onClick={() => tools.nudge(m.id, -1)} className={`${btn} px-2 rounded-r-none`} aria-label="往前一列"><ChevronLeft size={12} /></button>
-      <button type="button" onClick={() => onSeek(m.i)} className={`${btn} px-2 rounded-none -mx-px font-mono`} title="跳到這裡重聽">{lines[m.i].time}</button>
+      <button type="button" onClick={() => onSeek(m.i)} className={`${btn} px-2 rounded-none -mx-px font-mono`} title="跳到這裡播放">{lines[m.i].time}</button>
       <button type="button" onClick={() => tools.nudge(m.id, 1)} className={`${btn} px-2 rounded-l-none`} aria-label="往後一列"><ChevronRight size={12} /></button>
     </span>
   );
+  const ok = (g: Group) => {
+    const on = g.ms.every(m => m.ok);
+    return (
+      <button
+        type="button"
+        onClick={() => tools.toggleOk(g.ms.map(m => m.id))}
+        aria-pressed={on}
+        title={on ? '取消已核對' : '標成已核對'}
+        className={`${btn} @max-[640px]:order-3 ${on ? 'border-brand-green/25 dark:border-brand-green/25 bg-brand-green/10 dark:bg-brand-green/10 text-emerald-700 dark:text-brand-green' : ''}`}
+      >
+        <Check size={14} />已核對
+      </button>
+    );
+  };
   const del = (g: Group) => (
-    <button type="button" onClick={() => tools.remove(g.ms.map(m => m.id))} className={`${btn} px-2 border-transparent bg-transparent dark:bg-transparent`} aria-label="刪除標記"><X size={14} /></button>
+    <button type="button" onClick={() => tools.remove(g.ms.map(m => m.id))} className={`${btn} @max-[640px]:order-4 px-2 border-transparent bg-transparent dark:bg-transparent`} aria-label="刪除標記"><X size={14} /></button>
   );
 
   // 提示訊息獨立於清單：寫回後清單收起來，訊息還要看得到
@@ -300,25 +330,29 @@ export function SpeakerPanel({ tools, lines, onSeek, onFix }: {
   if (!tools.marks.length && !changed.length && !tools.canUndo) return toast;
 
   return (
-    <div className="hidden sm:flex bg-white dark:bg-zinc-900 border border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-4 flex-col gap-3 shadow-sm">
+    <div className="@container flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-bold text-indigo-600 dark:text-indigo-400">本機才有</span>
-        <span className="text-zinc-500 dark:text-zinc-400">{tools.marks.length} 筆標記</span>
+        <span className="font-bold text-zinc-700 dark:text-zinc-200">標記清單</span>
+        <span className="text-zinc-500 dark:text-zinc-400">{tools.marks.length} 筆標記・已核對 {okCount}/{groups.length}</span>
       </div>
 
       {groups.length > 0 && (
         <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
           {groups.map(g => (
-            <div key={g.ms.map(m => m.id).join('-')} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 py-2 text-xs">
-              <span className={`font-bold min-w-16 ${g.kind === 'warn' ? 'text-red-600' : 'text-zinc-800 dark:text-zinc-100'}`}>
+            <div key={g.ms.map(m => m.id).join('-')} className="flex flex-wrap items-center gap-x-2 gap-y-2 py-2.5 text-xs">
+              <button type="button" onClick={() => onSeek(g.ms[0].i)} className={`${btn} px-2`} aria-label="從這裡開始播放" title={`從 ${lines[g.ms[0].i].time} 開始播放`}><Play size={12} fill="currentColor" /></button>
+              <span className={`font-bold min-w-16 @max-[640px]:flex-1 ${g.kind === 'warn' ? 'text-red-600' : g.ms.every(m => m.ok) ? 'text-emerald-700 dark:text-brand-green' : 'text-zinc-800 dark:text-zinc-100'}`}>
                 {g.kind === 'range' ? '段落對調' : MK[g.ms[0].type]}
               </span>
-              {nud(g.ms[0])}
-              {g.kind === 'range' && <>–{nud(g.ms[1])}<span className="text-zinc-500">{g.ms[1].i - g.ms[0].i + 1} 列</span></>}
-              <span className="flex-1" />
-              {g.kind === 'warn' && <span className="font-bold text-red-600">{g.msg}</span>}
-              {g.kind === 'one' && inRange(g.ms[0].i) && <span className="font-bold text-red-600">在對調段落裡，套用後會換回原樣</span>}
-              {g.kind === 'check' && <button type="button" onClick={() => onFix(g.ms[0].i)} className={btn}>去改</button>}
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-2 @max-[640px]:order-5 @max-[640px]:basis-full">
+                {nud(g.ms[0])}
+                {g.kind === 'range' && <>–{nud(g.ms[1])}<span className="text-zinc-500">{g.ms[1].i - g.ms[0].i + 1} 列</span></>}
+              </span>
+              <span className="flex-1 @max-[640px]:hidden" />
+              {g.kind === 'warn' && <span className="font-bold text-red-600 @max-[640px]:order-6 @max-[640px]:basis-full">{g.msg}</span>}
+              {g.kind === 'one' && inRange(g.ms[0].i) && <span className="font-bold text-red-600 @max-[640px]:order-6 @max-[640px]:basis-full">在對調段落裡，套用後會換回原樣</span>}
+              {g.kind === 'check' && <button type="button" onClick={() => onFix(g.ms[0].i)} className={`${btn} @max-[640px]:order-3`}>去改</button>}
+              {ok(g)}
               {del(g)}
             </div>
           ))}
@@ -326,14 +360,14 @@ export function SpeakerPanel({ tools, lines, onSeek, onFix }: {
       )}
 
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-        <span className="text-xs text-zinc-500 dark:text-zinc-400 flex-1 min-w-40">
-          {tools.marks.length ? `${ready} 項可套用${groups.some(g => g.kind === 'warn') ? '，紅色的要先補齊' : ''}。` : '還沒有標記。'}
+        <span className="text-xs text-zinc-500 dark:text-zinc-400 flex-1 min-w-40 @max-[640px]:basis-full">
+          {tools.marks.length ? `${ready} 項可套用${readyOk ? `，勾了 ${readyOk} 項，只套用勾的` : ''}${groups.some(g => g.kind === 'warn') ? '，紅色的要先補齊' : ''}。` : '還沒有標記。'}
           {changed.length ? <> 未寫回 <b className="text-amber-600 dark:text-amber-400">{changed.length}</b> 列。</> : ''}
           {' '}抽屜裡點人名可以單列切換。
         </span>
-        <button type="button" onClick={tools.apply} disabled={!ready} className={`${btn} bg-indigo-500 dark:bg-indigo-500 border-indigo-500 dark:border-indigo-500 text-white dark:text-white`}>全部套用</button>
-        <button type="button" onClick={tools.undo} disabled={!tools.canUndo} className={btn}>復原</button>
-        <button type="button" onClick={tools.save} disabled={!changed.length || tools.saving} className={`${btn} bg-emerald-600 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-600 text-white dark:text-white`}>
+        <button type="button" onClick={tools.apply} disabled={!ready} className={`${btn} @max-[640px]:flex-1 border-brand-green/25 dark:border-brand-green/25 bg-brand-green/10 dark:bg-brand-green/10 text-emerald-700 dark:text-brand-green`}>{readyOk ? `套用已核對（${readyOk}）` : '全部套用'}</button>
+        <button type="button" onClick={tools.undo} disabled={!tools.canUndo} className={`${btn} @max-[640px]:flex-1`}>復原</button>
+        <button type="button" onClick={tools.save} disabled={!changed.length || tools.saving} className={`${btn} @max-[640px]:flex-1 bg-emerald-600 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-600 text-white dark:text-white`}>
           寫回 Markdown
         </button>
       </div>

@@ -17,6 +17,7 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Star,
+  Tag,
   Timer,
   type LucideIcon,
 } from 'lucide-react';
@@ -50,7 +51,7 @@ const SWITCH_BTN =
 
 /* 軌道 flex + items-center，白球由 flex 垂直置中（不靠 top 手算）；開時右移 = 軌道寬 32 − 左右內距各 2 − 球 14 = 14px（translate-x-3.5）。
    開的軌道兩種主題都用 emerald-600：白球對它 3.8:1；深色的 brand-green 太亮，白球只剩 1.9:1 */
-function SwitchTrack({ on }: { on: boolean }) {
+export function SwitchTrack({ on }: { on: boolean }) {
   return (
     <span
       aria-hidden="true"
@@ -100,7 +101,7 @@ export default function SubtitleToolbar({
   /** 設定鈕之後、全螢幕之前多放的按鈕（畫面定位、完整字幕） */
   children?: ReactNode;
 }) {
-  const { on, cur, offset, byVoice } = state;
+  const { on, cur, offset, byVoice, nameTag } = state;
   const uid = useId();
   const [open, setOpen] = useState<Tool | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -191,6 +192,20 @@ export default function SubtitleToolbar({
             依說話者上色
           </span>
           <SwitchTrack on={byVoice} />
+        </button>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={nameTag}
+          title="字幕上方固定掛主持人（左）與來賓（右）的人名，字幕也跟著靠左或靠右"
+          onClick={() => onChange({ nameTag: !nameTag })}
+          className="flex h-6 items-center justify-between gap-2.5 text-[13px]"
+        >
+          <span className="flex items-center gap-1.5 font-semibold text-zinc-500 dark:text-zinc-400">
+            <Tag size={14} aria-hidden="true" className="shrink-0" />
+            常駐人名標
+          </span>
+          <SwitchTrack on={nameTag} />
         </button>
         <SaveSlot state={state} onChange={onChange} />
       </>

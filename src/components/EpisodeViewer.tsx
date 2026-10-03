@@ -11,7 +11,7 @@ const CardMode = dynamic(() => import('./CardMode'), {
   ssr: false, 
   loading: () => <div className="w-full h-[500px] flex items-center justify-center text-zinc-500">載入中...</div> 
 });
-import { LayoutGrid, AlignLeft, Crosshair } from 'lucide-react';
+import { LayoutGrid, AlignLeft } from 'lucide-react';
 
 import TranscriptMode from './TranscriptMode';
 
@@ -157,18 +157,8 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
             </button>
           </div>
 
-          {/* Mode Toggle 或 逐字稿畫面定位按鈕 */}
-          {viewType === 'transcript' ? (
-            <button
-              type="button"
-              onClick={scrollToPlayerStage}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800/60 transition shadow-sm hover:scale-105 active:scale-95"
-              title="畫面定位：一鍵平滑滾動對齊至播放器與字幕視角（免自己滾動滾輪）"
-            >
-              <Crosshair size={15} />
-              <span>畫面定位</span>
-            </button>
-          ) : (
+          {/* 圖卡／文字切換；逐字稿自己有影片下方的工具列，這裡不放 */}
+          {viewType !== 'transcript' && (
             <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-xl shrink-0 min-w-min">
               <button
                 onClick={() => pickCardMode(true)}

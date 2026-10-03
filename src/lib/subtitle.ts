@@ -18,6 +18,8 @@ export interface SubtitleState {
   cur: SubtitleStyle;
   /** 依說話者上色。不是樣式的一部分，不存進快捷 */
   byVoice: boolean;
+  /** 字幕上方常駐的人名標，換人才換字。不是樣式的一部分，不存進快捷 */
+  nameTag: boolean;
   /** 整組樣式快捷，三格，空的是 null */
   slots: (SubtitleStyle | null)[];
   /** 每格快捷的自訂名稱，空字串＝用預設的「快捷 N」 */
@@ -46,6 +48,7 @@ export const DEFAULT_SUBTITLE_STATE: SubtitleState = {
   on: false,
   cur: SUBTITLE_DEFAULT_STYLE,
   byVoice: true,
+  nameTag: true,
   slots: [null, null, null],
   names: ['', '', ''],
   def: null,
@@ -91,6 +94,7 @@ export function parseSubtitleState(raw: string | null): SubtitleState {
     on: o.on === true,
     cur: sanitizeStyle(o.cur),
     byVoice: typeof o.byVoice === 'boolean' ? o.byVoice : true,
+    nameTag: typeof o.nameTag === 'boolean' ? o.nameTag : true,
     slots: slotList,
     names: Array.from({ length: SUBTITLE_SLOT_COUNT }, (_, i) =>
       typeof names[i] === 'string' ? names[i].trim().slice(0, SUBTITLE_NAME_MAX) : '',

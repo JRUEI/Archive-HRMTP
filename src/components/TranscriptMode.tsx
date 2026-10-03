@@ -11,10 +11,10 @@ import {
   SUBTITLE_STORAGE_KEY,
   type SubtitleState,
 } from '@/lib/subtitle';
-import { Search, X, FileText, Crosshair } from 'lucide-react';
+import { Search, X, FileText, Crosshair, Clock } from 'lucide-react';
 import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons, MarkMenu } from './SpeakerMarks';
 import SubtitleOverlay from './SubtitleOverlay';
-import SubtitleToolbar, { BAR_BTN, LABEL } from './SubtitleToolbar';
+import SubtitleToolbar, { BAR_BTN, LABEL, SwitchTrack } from './SubtitleToolbar';
 
 // 只宣告這裡用得到的 YouTube IFrame API
 interface YTPlayer {
@@ -38,6 +38,7 @@ declare global {
 
 const GROUP_SIZE_KEY = 'harumatope_transcript_groupsize_v2';
 const GROUP_CARD_KEY = 'harumatope_transcript_groupcard_v1';
+const GROUP_TIME_KEY = 'harumatope_transcript_grouptime_v1';
 
 /** 實心強調色：#059669／#34d399 上放近黑字（5.3:1／10.4:1），白字只有 3.8:1 */
 const SOLID_ACCENT = 'bg-brand-green text-zinc-950';
@@ -95,6 +96,14 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
   const handleGroupCardChange = (on: boolean) => {
     setStoredShowGroupCard(on);
     writeStoredString(GROUP_CARD_KEY, on ? '1' : '0');
+  };
+
+  // 字幕群每句前面的時間標，預設開；水合前一樣先照預設畫
+  const [storedShowTime, setStoredShowTime] = useState(() => readStoredString(GROUP_TIME_KEY) !== '0');
+  const showTime = hydrated ? storedShowTime : true;
+  const handleTimeChange = (on: boolean) => {
+    setStoredShowTime(on);
+    writeStoredString(GROUP_TIME_KEY, on ? '1' : '0');
   };
 
   // 影片上的字幕：開關、樣式、快捷、延遲整包存在同一個 key。水合前一律用預設（預設是關）
@@ -166,6 +175,14 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
   // 只有主持人、來賓有字色；工作人員、兩人一起說、或關掉「依說話者上色」都是白字
   const subtitleColor = (speaker: string) =>
     !subtitle.byVoice ? undefined : speaker === HOST ? VOICE.host.subtitle : speaker === episode.guest ? VOICE.guest.subtitle : undefined;
+
+  // 字幕上方常駐的人名標：左主持人、右來賓。沒有來賓的個人回不掛，只有一個名字常駐是雜訊
+  const subtitleTags = episode.guest
+    ? ([
+        { name: HOST, color: subtitleColor(HOST) },
+        { name: episode.guest, color: subtitleColor(episode.guest) },
+      ] as const)
+    : undefined;
 
   // 字幕群時間欄寬（ch）：時間遞增，最後一列字最多；整集固定寬，播放中不會跳動
   const timeCh = parsedLines.at(-1)?.time.length ?? 5;
@@ -421,6 +438,7 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
                   style={subtitle.cur}
                   offsetMs={subtitle.offset}
                   colorOf={subtitleColor}
+                  tags={subtitle.nameTag ? subtitleTags : undefined}
                 />
               )}
             </div>
@@ -453,6 +471,7 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
                 <span className={LABEL}>完整字幕</span>
               </button>
             </SubtitleToolbar>
+            <MarkButtons tools={speakerTools} />
           </div>
         )}
 
@@ -460,19 +479,30 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
         {showGroupCard && currentGroupLines.length > 0 && (
           <div
             id="transcript-subtitle-group"
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 pt-3 sm:pt-4 shadow-lg flex flex-col gap-2.5"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 pt-2.5 sm:pt-3 shadow-lg flex flex-col gap-2.5"
           >
-            {/* 標題列的 pb 跟卡片的 pt-3 sm:pt-4 同值：上緣離卡片邊 = 下緣離分隔線，字才會落在這一段的正中；要調鬆緊兩處一起改 */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pb-3 sm:pb-4 border-b border-zinc-100 dark:border-zinc-800/80">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-200">
-                  <span className="w-2 h-2 rounded-full bg-brand-green animate-ping"></span>
-                  即時字幕群<span className="max-sm:hidden">（{groupSize} 句同步）</span>
-                </span>
-                <MarkButtons tools={speakerTools} />
-              </div>
+            {/* 窄到放不下標題＋時間開關＋句數鈕（約 440px 以下）時，標題只留跳動的圓點，字給螢幕閱讀器。
+                標題列的 pb 跟卡片的 pt-2.5 sm:pt-3 同值：上緣離卡片邊 = 下緣離分隔線，字才會落在這一段的正中；要調鬆緊兩處一起改 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pb-2.5 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800/80">
+              <span className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-200">
+                <span className="w-2 h-2 rounded-full bg-brand-green animate-ping"></span>
+                <span className="max-[440px]:sr-only">即時字幕群</span><span className="max-sm:hidden">（{groupSize} 句同步）</span>
+              </span>
               {/* 手機只留標題和按鈕一排；句數按鈕本身就看得出目前幾句 */}
               <div className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showTime}
+                  aria-label="時間標"
+                  title="顯示／隱藏每句前面的時間"
+                  onClick={() => handleTimeChange(!showTime)}
+                  className="inline-flex h-6 shrink-0 items-center gap-1 rounded-[10px] px-1 text-[13px] font-bold text-zinc-700 transition hover:bg-brand-green/10 dark:text-zinc-200 sm:gap-1.5 sm:px-2"
+                >
+                  <Clock size={14} aria-hidden="true" />
+                  <span className="max-sm:hidden">時間</span>
+                  <SwitchTrack on={showTime} />
+                </button>
                 <span className="max-sm:hidden text-[13px] text-zinc-500 dark:text-zinc-400">顯示句數：</span>
                 <div className="inline-flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60">
                   {[1, 2, 3, 4, 5].map((num) => (
@@ -513,10 +543,11 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
                     onClick={() => seekTo(line.seconds, line.index)}
                     onContextMenu={(e) => speakerTools.openMenu(e, line.index)}
                     title="點擊跳轉影片至此秒數"
-                    className="group w-full text-left py-2.5 sm:py-3 px-2 sm:px-3 grid sm:grid-cols-[auto_minmax(0,1fr)] items-start sm:gap-x-3 rounded-xl cursor-pointer hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-[background-color] duration-200"
+                    className={`group w-full text-left py-2.5 sm:py-3 px-2 sm:px-3 grid sm:grid-cols-[auto_minmax(0,1fr)] items-start ${showTime ? 'sm:gap-x-3' : ''} rounded-xl cursor-pointer hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-[background-color] duration-200`}
                   >
                     {/* button 裡只能放 phrasing content，所以這幾層都是 span */}
                     <span className="sm:col-start-2 flex items-center gap-2 mb-1 empty:hidden">
+                      {showTime && <span className="sm:hidden font-mono text-xs tabular-nums text-zinc-400 dark:text-zinc-500">{line.time}</span>}
                       {!hideName && (
                         <span className={`font-bold text-xs px-2 py-0.5 rounded-full border ${isHost ? VOICE.host.label : VOICE.guest.label}`}>
                           {line.speaker}
@@ -524,12 +555,15 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
                       )}
                       <MarkTags tools={speakerTools} i={line.index} />
                     </span>
-                    {/* 時間：桌面是純數字欄，手機只留給螢幕閱讀器（max-sm:sr-only）省下欄寬。
+                    {/* 時間：桌面是純數字欄；手機改塞在人名那一列最前面（上面那個 sm:hidden 的 span），這格 max-sm:hidden。
+                        標題列的時間開關關掉時，這格只留給螢幕閱讀器（sr-only）。
                         欄寬 = 整集最長的時間字數（ch），各列文字左緣才切齊。
                         高度 = 內文行高（sm:text-base × leading-relaxed = 26px），時間在裡面置中，
                         對到內文第一行；sm:top-[…] 是字型字面中心的校正值，換字型或字級要重量 */}
                     <span
-                      className="max-sm:sr-only sm:col-start-1 sm:flex sm:h-[26px] sm:w-(--time-w) sm:shrink-0 sm:items-center sm:relative sm:top-[1px] font-mono text-xs tabular-nums text-zinc-400 dark:text-zinc-500 transition-colors group-hover:text-emerald-700 dark:group-hover:text-brand-green"
+                      className={showTime
+                        ? 'max-sm:hidden sm:col-start-1 sm:flex sm:h-[26px] sm:w-(--time-w) sm:shrink-0 sm:items-center sm:relative sm:top-[1px] font-mono text-xs tabular-nums text-zinc-400 dark:text-zinc-500 transition-colors group-hover:text-emerald-700 dark:group-hover:text-brand-green'
+                        : 'sr-only'}
                       style={{ '--time-w': `${timeCh}ch` } as CSSProperties}
                     >
                       {line.time}
