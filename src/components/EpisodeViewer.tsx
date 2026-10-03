@@ -199,7 +199,8 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
           <ClipsMode
             episode={episode}
             onPlay={(clip) => {
-              setStartAt(toSeconds(clip.start));
+              // 片段第一列的確切時間（可到 0.1 秒）；從整秒開始播會先閃一下上一列
+              setStartAt(episode.transcript?.find(l => l.time === clip.start)?.seconds ?? toSeconds(clip.start));
               setViewType('transcript');
               setTimeout(scrollToPlayerStage, 100);
             }}

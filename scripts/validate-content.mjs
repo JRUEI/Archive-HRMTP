@@ -187,9 +187,10 @@ function validateEpisode(fileName) {
     }
   }
 
+  // [mm:ss.d]：0.1 秒的小數給字幕疊層用；這裡的檢查與段落、精華的對照都看整秒
   const transcriptPattern =
-    /^\[(\d{2}:\d{2}(?::\d{2})?)\]\s*\[([^\]]+)\]\s*(.*)$/;
-  const speakerlessPattern = /^\[(\d{2}:\d{2}(?::\d{2})?)\]\s*(.+)$/;
+    /^\[(\d{2}:\d{2}(?::\d{2})?)(?:\.\d)?\]\s*\[([^\]]+)\]\s*(.*)$/;
+  const speakerlessPattern = /^\[(\d{2}:\d{2}(?::\d{2})?)(?:\.\d)?\]\s*(.+)$/;
   const guest = typeof parsed.data.guest === "string" ? parsed.data.guest.trim() : "";
   const speakers = new Set([
     "福嶋晴菜",
@@ -230,7 +231,7 @@ function validateEpisode(fileName) {
       report(errors, relativePath, `第 ${index + 1} 行的時間碼無效：${timestamp}`);
     } else {
       if (seconds < previousSeconds) backwardsTimestamps += 1;
-      // 播放時用二分搜尋找目前這一列，同一秒的列只會亮第一列
+      // 畫面只顯示整秒，段落、精華也用整秒對到列：同一秒的兩列分不出來
       if (seconds === previousSeconds) sameTimestamps += 1;
       previousSeconds = seconds;
       lineSeconds.add(seconds);

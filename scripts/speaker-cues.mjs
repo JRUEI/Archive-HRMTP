@@ -21,7 +21,7 @@ export function parse(md) {
   const yt = md.match(/^youtube:\s*"[^"]*v=([\w-]{11})/m);
   const body = md.slice(md.indexOf('## 【完整逐字稿】'));
   const lines = [];
-  for (const m of body.matchAll(/^\[(\d+:\d{2})\] \[([^\]]+)\] (.*)$/gm)) {
+  for (const m of body.matchAll(/^\[(\d+:\d{2})(?:\.\d)?\] \[([^\]]+)\] (.*)$/gm)) {
     const [mm, ss] = m[1].split(':').map(Number);
     lines.push({ t: m[1], sec: mm * 60 + ss, sp: m[2], text: m[3] });
   }

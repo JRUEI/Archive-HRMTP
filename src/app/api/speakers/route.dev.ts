@@ -4,7 +4,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const LINE = /^(\s*\[(\d{2}:\d{2}(?::\d{2})?)\]\s*\[)(.*?)(\].*)$/;
+// m[2] 是整秒（畫面上的 time），0.1 秒的小數留在 m[1] 裡原樣寫回
+const LINE = /^(\s*\[(\d{2}:\d{2}(?::\d{2})?)(?:\.\d)?\]\s*\[)(.*?)(\].*)$/;
 const HOST = '福嶋晴菜';
 
 interface Change { i: number; time: string; from: string; to: string }

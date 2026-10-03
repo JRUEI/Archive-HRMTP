@@ -3,6 +3,7 @@ import 'server-only';
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { toSeconds } from './clips';
 
 const episodesDirectory = path.join(process.cwd(), 'content', 'episodes');
 
@@ -15,7 +16,10 @@ export interface EpisodeCard {
 }
 
 export interface TranscriptLine {
+  /** 顯示與跳轉用的整秒 mm:ss，不帶小數 */
   time: string;
+  /** 檔案裡的時間（可到 0.1 秒），字幕疊層與播放同步看這個 */
+  seconds: number;
   speaker: string;
   text: string;
 }
@@ -146,17 +150,19 @@ export function getEpisodeData(id: string): EpisodeData | null {
     if (transcriptMatch) {
       const transcriptText = transcriptMatch[1];
       const lines = transcriptText.split('\n');
-      const lineRegex = /^\[(\d{2}:\d{2}(?::\d{2})?)\]\s*\[(.*?)\]\s*(.*)$/;
-      
+      // [mm:ss.d]：小數可有可無，time 只取整秒那段
+      const lineRegex = /^\[((\d{2}:\d{2}(?::\d{2})?)(?:\.\d)?)\]\s*\[(.*?)\]\s*(.*)$/;
+
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
         const match = trimmed.match(lineRegex);
         if (match) {
           transcript.push({
-            time: match[1],
-            speaker: match[2],
-            text: match[3]
+            time: match[2],
+            seconds: toSeconds(match[1]),
+            speaker: match[3],
+            text: match[4]
           });
         }
       }

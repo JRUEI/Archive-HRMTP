@@ -52,25 +52,13 @@ const VOICE = {
 // 抽屜的時間戳：MM:SS 固定 5 字，給固定寬讓每列內文左緣對齊；高 22px 等於人名標籤的高
 const TIME_TAG = 'shrink-0 inline-flex items-center justify-center w-12 h-[22px] rounded-md border font-mono text-xs font-bold transition-colors';
 
-// 時間字串轉換為秒數 (支援 MM:SS 或 HH:MM:SS)
-function timeToSeconds(timeStr: string): number {
-  if (!timeStr) return 0;
-  const parts = timeStr.split(':').map(Number);
-  if (parts.length === 3) {
-    return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
-  } else if (parts.length === 2) {
-    return (parts[0] || 0) * 60 + (parts[1] || 0);
-  }
-  return 0;
-}
-
 /** startAt：從精華分頁按「播放」進來時的起點秒數，播放器一準備好就跳過去播 */
 export default function TranscriptMode({ episode, startAt }: { episode: EpisodeData; startAt?: number }) {
   const videoId = extractYouTubeId(episode.youtubeUrl);
 
   // 帶著起點進來時，字幕群一開始就停在那一句，不用等播放器
   const [activeIndex, setActiveIndex] = useState<number>(() =>
-    startAt === undefined ? -1 : (episode.transcript ?? []).findLastIndex(l => timeToSeconds(l.time) <= startAt),
+    startAt === undefined ? -1 : (episode.transcript ?? []).findLastIndex(l => l.seconds <= startAt),
   );
   // 只認掛載當下的起點：之後上層把它清掉也不會讓播放器重來
   const startAtRef = useRef(startAt);
@@ -155,12 +143,11 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
     }
   }, []);
 
-  // 預先計算並快取包含秒數的逐字稿
+  // 逐字稿加上 index（秒數在 markdown.ts 就算好了，可到 0.1 秒）
   const parsedLines = useMemo(() => {
     return (episode.transcript || []).map((line, idx) => ({
       ...line,
       index: idx,
-      seconds: timeToSeconds(line.time),
     }));
   }, [episode.transcript]);
 
