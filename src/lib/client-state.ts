@@ -26,10 +26,24 @@ export function readStoredBoolean(key: string, fallback: boolean) {
 }
 
 export function writeStoredBoolean(key: string, value: boolean) {
+  writeStoredString(key, String(value));
+}
+
+export function readStoredString(key: string) {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredString(key: string, value: string) {
   if (typeof window === 'undefined') return;
 
   try {
-    window.localStorage.setItem(key, String(value));
+    window.localStorage.setItem(key, value);
   } catch {
     // Preference persistence is best-effort when browser storage is unavailable.
   }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { EpisodeData } from '@/lib/markdown';
+import { toSeconds } from '@/lib/clips';
 import dynamic from 'next/dynamic';
 import TextMode from './TextMode';
 import ClipsMode from './ClipsMode';
@@ -17,29 +18,31 @@ import TranscriptMode from './TranscriptMode';
 export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
   const [viewType, setViewType] = useState<'summary' | 'lossless' | 'clips' | 'transcript'>('summary');
   const [isCardMode, setIsCardMode] = useState(false);
+  // 精華分頁的「播放」「查看圖卡」帶過去的起點；自己點分頁或切圖卡／文字就清掉，下次進去從頭
+  const [startAt, setStartAt] = useState<number>();
+  const [cardStartClip, setCardStartClip] = useState<number>();
 
-  // 畫面視角定位：底部對齊字幕群底下空白的中間，剛好露出上方影片時間軸（免手動滑動滾輪）
+  const pickView = (view: typeof viewType) => {
+    setViewType(view);
+    setStartAt(undefined);
+    setCardStartClip(undefined);
+  };
+  const pickCardMode = (on: boolean) => {
+    setIsCardMode(on);
+    setCardStartClip(undefined);
+  };
+
+  // 畫面視角定位：底部對齊字幕群底下 10px，剛好露出上方影片時間軸（免手動滑動滾輪）
   const scrollToPlayerStage = () => {
     const tryScroll = () => {
       const subtitleEl = document.getElementById('transcript-subtitle-group');
-      const controlsEl = document.getElementById('transcript-controls');
       const playerEl = document.getElementById('transcript-player-stage');
 
       if (subtitleEl) {
         const subtitleRect = subtitleEl.getBoundingClientRect();
         const subtitleBottom = window.scrollY + subtitleRect.bottom;
 
-        let midBlankY = subtitleBottom + 10;
-        if (controlsEl) {
-          const controlsRect = controlsEl.getBoundingClientRect();
-          const controlsTop = window.scrollY + controlsRect.top;
-          const gap = controlsTop - subtitleBottom;
-          if (gap > 0) {
-            midBlankY = subtitleBottom + gap / 2;
-          }
-        }
-
-        let targetScrollY = midBlankY - window.innerHeight;
+        let targetScrollY = subtitleBottom + 10 - window.innerHeight;
         if (playerEl) {
           const playerRect = playerEl.getBoundingClientRect();
           const playerTop = window.scrollY + playerRect.top;
@@ -124,20 +127,20 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
           {/* Content Toggle */}
           <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-xl shrink-0 min-w-min">
             <button
-              onClick={() => setViewType('summary')}
+              onClick={() => pickView('summary')}
               className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'summary' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
             >
               精簡總結
             </button>
             <button
-              onClick={() => setViewType('lossless')}
+              onClick={() => pickView('lossless')}
               className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'lossless' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
             >
               段落紀錄
             </button>
             {episode.clips.length > 0 && (
               <button
-                onClick={() => setViewType('clips')}
+                onClick={() => pickView('clips')}
                 className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'clips' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-transparent dark:border-zinc-700/50' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               >
                 精華
@@ -145,7 +148,7 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
             )}
             <button
               onClick={() => {
-                setViewType('transcript');
+                pickView('transcript');
                 setTimeout(scrollToPlayerStage, 100);
               }}
               className={`flex-1 sm:flex-none px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${viewType === 'transcript' ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
@@ -168,14 +171,14 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
           ) : (
             <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-xl shrink-0 min-w-min">
               <button
-                onClick={() => setIsCardMode(true)}
+                onClick={() => pickCardMode(true)}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${isCardMode ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               >
                 <LayoutGrid size={18} strokeWidth={2.5} className="shrink-0" />
                 <span className="whitespace-nowrap">圖卡</span>
               </button>
               <button
-                onClick={() => setIsCardMode(false)}
+                onClick={() => pickCardMode(false)}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 lg:px-3 py-2 rounded-lg font-bold transition-all text-sm border ${!isCardMode ? 'bg-[#ebdfff] dark:bg-brand-purple/20 text-brand-purple shadow-sm border-transparent dark:border-brand-purple/20' : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               >
                 <AlignLeft size={18} strokeWidth={2.5} className="shrink-0" />
@@ -189,11 +192,22 @@ export default function EpisodeViewer({ episode }: { episode: EpisodeData }) {
       {/* Content Area */}
       <div className="w-full flex justify-center">
         {viewType === 'transcript' ? (
-          <TranscriptMode episode={episode} />
+          <TranscriptMode episode={episode} startAt={startAt} />
         ) : isCardMode ? (
-          <CardMode key={viewType} episode={episode} view={viewType} />
+          <CardMode key={viewType} episode={episode} view={viewType} startClip={cardStartClip} />
         ) : viewType === 'clips' ? (
-          <ClipsMode episode={episode} />
+          <ClipsMode
+            episode={episode}
+            onPlay={(clip) => {
+              setStartAt(toSeconds(clip.start));
+              setViewType('transcript');
+              setTimeout(scrollToPlayerStage, 100);
+            }}
+            onCards={(index) => {
+              setCardStartClip(index);
+              setIsCardMode(true);
+            }}
+          />
         ) : (
           <TextMode episode={episode} isLossless={viewType === 'lossless'} />
         )}

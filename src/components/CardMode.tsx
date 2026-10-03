@@ -31,6 +31,8 @@ interface RenderableCard {
   meta?: string;
   no?: number;
   total?: number;
+  /** 精華卡是第幾段（0 起）：精華分頁按「查看圖卡」時翻到那段的第一張 */
+  clip?: number;
 }
 
 interface ExportableCardProps {
@@ -256,12 +258,12 @@ function packClip(lines: ClipLine[], cap: number): ClipLine[][] {
 
 function paginateClips(clips: EpisodeClip[], episode: EpisodeData): RenderableCard[] {
   const cards: RenderableCard[] = [];
-  for (const clip of clips) {
+  for (const [ci, clip] of clips.entries()) {
     const lines = clipLines(clip, episode.transcript);
     const { chunks } = settle(clip.title, budget =>
       evenPack(cap => packClip(lines, cap), budget, Math.max(...lines.map(segHeight)) + META_H));
     chunks.forEach((segs, i) => cards.push({
-      type: 'content', tag: '精華', segs,
+      type: 'content', tag: '精華', segs, clip: ci,
       meta: i === 0 ? `${clip.start}–${clip.end}　${clipLength(clip)}` : undefined,
       displayTitle: chunks.length > 1 ? `${clip.title} (${i + 1}/${chunks.length})` : clip.title,
     }));
@@ -508,8 +510,12 @@ const ExportableCard = ({ card, index, isPreview = false, episode, isDark, total
   );
 };
 
-export default function CardMode({ episode, view }: { episode: EpisodeData, view: 'summary' | 'lossless' | 'clips' }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+/** startClip：從精華分頁按「查看圖卡」進來時，一開始就停在那段的第一張 */
+export default function CardMode({ episode, view, startClip }: { episode: EpisodeData, view: 'summary' | 'lossless' | 'clips', startClip?: number }) {
+  const [currentIndex, setCurrentIndex] = useState(() =>
+    view === 'clips' && startClip !== undefined
+      ? Math.max(0, paginateClips(episode.clips, episode).findIndex(c => c.clip === startClip))
+      : 0);
   const { theme } = useTheme();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });

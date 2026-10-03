@@ -26,17 +26,6 @@ export function clipLines(clip: EpisodeClip, transcript: TranscriptLine[] = []):
   return lines.map((l, i) => ({ ...l, isQuote: i === at }));
 }
 
-// 同一人連續的列併成一段，精華句那一列自成一段
-export function mergeLines(lines: ClipLine[]): ClipLine[] {
-  const out: ClipLine[] = [];
-  for (const l of lines) {
-    const last = out.at(-1);
-    if (last && !last.isQuote && !l.isQuote && last.speaker === l.speaker) out[out.length - 1] = { ...last, text: last.text + l.text };
-    else out.push({ ...l });
-  }
-  return out;
-}
-
 export const shortName = (speaker: string) =>
   speaker.includes('＆') ? '兩人' : speaker === '工作人員' ? speaker : speaker.slice(0, 2);
 

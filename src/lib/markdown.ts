@@ -20,12 +20,20 @@ export interface TranscriptLine {
   text: string;
 }
 
+// 精華片段的一拍：起、鋪、收寫在集數檔裡；落就是精華句，時間取它在逐字稿的那一列，不另外寫
+export interface ClipBeat {
+  kind: string;
+  time: string;
+  text: string;
+}
+
 // 精華片段：起訖是逐字稿的列（迄＝下一列開始的時間），對話照時段從逐字稿切，不另外寫
 export interface EpisodeClip {
   start: string;
   end: string;
   title: string;
   quote: string;
+  beats: ClipBeat[];
 }
 
 export interface EpisodeData {
@@ -121,10 +129,16 @@ export function getEpisodeData(id: string): EpisodeData | null {
     return { tag, title, content: bodyContent };
   });
 
-  // 精華片段：### [mm:ss–mm:ss] 標題，下一行 > 精華句
+  // 精華片段：### [mm:ss–mm:ss] 標題，下一行 > 精華句，再下面 - 起 [mm:ss] …、- 鋪 …、- 收 …
   const clipsText = content.match(/##\s*【精華片段】([\s\S]*?)(?=\n##\s*【|$)/)?.[1] ?? '';
-  const clips: EpisodeClip[] = [...clipsText.matchAll(/^###\s*\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\s*(.+?)\s*\n\s*>\s*(.+?)\s*$/gm)]
-    .map(([, start, end, title, quote]) => ({ start, end, title, quote }));
+  const clips: EpisodeClip[] = clipsText.split(/^(?=###)/m).flatMap(block => {
+    const head = block.match(/^###\s*\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\s*(.+?)\s*\n\s*>\s*(.+?)\s*$/m);
+    if (!head) return [];
+    const [, start, end, title, quote] = head;
+    const beats = [...block.matchAll(/^-\s*(起|鋪|收)\s*\[(\d{2}:\d{2})\]\s*(.+?)\s*$/gm)]
+      .map(([, kind, time, text]) => ({ kind, time, text }));
+    return [{ start, end, title, quote, beats }];
+  });
 
   // Extract Transcript
   const transcriptMatch = content.match(/##\s*【完整逐字稿】([\s\S]*)$/);

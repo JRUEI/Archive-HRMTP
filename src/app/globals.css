@@ -8,6 +8,11 @@
   --color-brand-purple: #9333ea; /* Tailwind purple-600 for light mode */
   --color-brand-green: #059669; /* Tailwind emerald-600 for light mode */
   --color-brand-gold: #D4AF37;
+  /* 影片上的字幕字色。字幕底是 75% 黑，壓在全白畫面上約 #404040，
+     字的相對亮度要 ≥ 0.405 才有 4.5:1，所以比名牌的紫、琥珀再亮一階。
+     字幕一律疊在影片上，深淺主題同值，只定義一次 */
+  --color-subtitle-host: #d8b4fe; /* purple-300，名牌紫 #c084fc 亮度只有 0.347 */
+  --color-subtitle-guest: #fbbf24; /* amber-400 */
 }
 
 .dark {
@@ -27,6 +32,13 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "PingFang TC", "Helvetica Neue", var(--font-noto-sans-tc), "Microsoft JhengHei", sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-noto-serif-tc), "Songti TC", "PMingLiU", serif;
+}
+
+/* 字幕面板按鈕按完的回彈 */
+@keyframes btn-pop {
+  0% { transform: scale(0.94); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
 }
 
 body {

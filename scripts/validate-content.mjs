@@ -149,7 +149,7 @@ function validateEpisode(fileName) {
     }
   }
 
-  // 精華片段寫成 ### [mm:ss–mm:ss] 標題，下一行 > 精華句（規則見 docs/episode-workflow.md）
+  // 精華片段寫成 ### [mm:ss–mm:ss] 標題，下一行 > 精華句，再寫 - 起／- 鋪／- 收 [mm:ss] 各一行（規則見 docs/episode-workflow.md）
   const clips = [];
   for (let index = clipsHeading + 1; clipsHeading !== -1 && index < transcriptHeading; index += 1) {
     const line = lines[index].trim();
@@ -159,12 +159,17 @@ function validateEpisode(fileName) {
       clip.quote = line.replace(/^>\s*/, "");
       continue;
     }
-    const match = /^###\s*\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\s*(\S.*)$/.exec(line);
-    if (!match) {
-      report(errors, relativePath, `精華片段「${line}」要寫成 ### [mm:ss–mm:ss] 標題，下一行 > 精華句`);
+    const beat = /^-\s*(起|鋪|收)\s*\[(\d{2}:\d{2})\]\s*\S/.exec(line);
+    if (beat && clip) {
+      clip.beats.push({ kind: beat[1], time: beat[2], seconds: timestampToSeconds(beat[2]) });
       continue;
     }
-    clips.push({ heading: line.replace(/^###\s*/, ""), start: timestampToSeconds(match[1]), end: timestampToSeconds(match[2]), quote: "" });
+    const match = /^###\s*\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\s*(\S.*)$/.exec(line);
+    if (!match) {
+      report(errors, relativePath, `精華片段「${line}」要寫成 ### [mm:ss–mm:ss] 標題，下一行 > 精華句，再來 - 起／- 鋪／- 收 [mm:ss] 各一行`);
+      continue;
+    }
+    clips.push({ heading: line.replace(/^###\s*/, ""), start: timestampToSeconds(match[1]), end: timestampToSeconds(match[2]), quote: "", beats: [] });
   }
   if (clipsHeading !== -1 && (clips.length < 3 || clips.length > 5)) {
     report(errors, relativePath, `精華片段有 ${clips.length} 段，應為 3～5 段`);
@@ -317,7 +322,7 @@ function validateEpisode(fileName) {
     }
   });
 
-  clips.forEach(({ heading, start, end, quote }, index) => {
+  clips.forEach(({ heading, start, end, quote, beats }, index) => {
     if (start === null || end === null || !lineSeconds.has(start) || !lineSeconds.has(end)) {
       report(errors, relativePath, `精華片段「${heading}」的起訖要是逐字稿列的時間碼（迄＝下一列開始的時間）`);
       return;
@@ -328,10 +333,31 @@ function validateEpisode(fileName) {
     }
     const range = rows.filter((row) => row.seconds >= start && row.seconds < end);
     if (!range.length) return;
+    const quoteRow = quote && range.find((row) => normalizeQuote(row.text).includes(normalizeQuote(quote)));
     if (!quote) {
       report(errors, relativePath, `精華片段「${heading}」下一行要寫 > 精華句`);
-    } else if (!range.some((row) => normalizeQuote(row.text).includes(normalizeQuote(quote)))) {
+    } else if (!quoteRow) {
       report(errors, relativePath, `精華片段「${heading}」的精華句不在這段時間的逐字稿裡`);
+    }
+    // 起鋪落收：落＝精華句那一列，不另外寫。起＝片段開頭，四拍時間嚴格遞增、都在片段內、都對得到逐字稿的列
+    if (beats.length) {
+      const order = beats.map((beat) => beat.kind).join("");
+      if (order !== "起鋪收") {
+        report(errors, relativePath, `精華片段「${heading}」要依序各寫一行 - 起、- 鋪、- 收（現在是 ${order}）`);
+      } else if (quoteRow) {
+        const [rise, build, close] = beats.map((beat) => beat.seconds);
+        if (rise !== start) {
+          report(errors, relativePath, `精華片段「${heading}」的起 [${beats[0].time}] 要等於片段開頭`);
+        }
+        if (!(rise < build && build < quoteRow.seconds && quoteRow.seconds < close && close < end)) {
+          report(errors, relativePath, `精華片段「${heading}」的時間要 起 < 鋪 < 落（精華句那列）< 收 < 迄`);
+        }
+      }
+      for (const beat of beats) {
+        if (!lineSeconds.has(beat.seconds)) {
+          report(errors, relativePath, `精華片段「${heading}」的${beat.kind} [${beat.time}] 對不到逐字稿任何一列`);
+        }
+      }
     }
     if (leansBack(range[0].text)) {
       report(errors, relativePath, `精華片段「${heading}」第一列在接上一句，開場往前找：${range[0].text}`);
