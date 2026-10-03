@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>字幕人名標外框改善方案</title>
+<style>
+:root{
+  --bg:#f4f4f5; --surface:#fff; --ink:#18181b; --ink2:#3f3f46; --muted:#71717a; --line:#e4e4e7;
+  --in:#6366f1; --in-bg:#eef2ff; --ok:#047857; --ok-bg:#ecfdf5;
+  --host:#d8b4fe; --guest:#fbbf24;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09090b; --surface:#18181b; --ink:#fafafa; --ink2:#d4d4d8; --muted:#a1a1aa; --line:#27272a;
+    --in:#818cf8; --in-bg:rgba(129,140,248,.14); --ok:#6ee7b7; --ok-bg:rgba(16,185,129,.14);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:24px;margin:0 0 6px}
+.lede{color:var(--muted);margin:0 0 20px}
+.lede b{color:var(--ink)}
+
+/* 背景切換 */
+@media (min-width:760px){.pick{position:sticky;top:8px}}
+.pick{z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin:0 0 20px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.pick span{font-size:13px;font-weight:700;color:var(--muted);margin-right:4px}
+.pick label{cursor:pointer}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick i{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--line);font:700 13px/1 inherit;font-style:normal;color:var(--ink2)}
+.pick i::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--sw);border:1px solid rgba(0,0,0,.25)}
+.pick input:checked + i{border-color:var(--in);background:var(--in-bg);color:var(--in)}
+.pick input:focus-visible + i{outline:2px solid var(--in);outline-offset:2px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
+@media (max-width:480px){.grid{grid-template-columns:1fr}}
+.opt{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.opt header{display:flex;align-items:baseline;gap:10px}
+.opt h2{font-size:16px;margin:0}
+.badge{font:700 11px/1 ui-monospace,Consolas,monospace;padding:4px 7px;border-radius:6px;background:var(--in-bg);color:var(--in)}
+.badge.rec{background:var(--ok-bg);color:var(--ok)}
+.opt p{margin:0;color:var(--muted);font-size:13px}
+.read{margin:0;font:12px/1.5 ui-monospace,"Cascadia Mono",Consolas,monospace;color:var(--ink2)}
+.read b{font-weight:700}
+.bad{color:#dc2626}.good{color:var(--ok)}
+
+/* 模擬影片舞台：尺寸全用 cqw / em，跟站上字幕疊層同一套算法 */
+.stage{container-type:inline-size;position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:var(--bd)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--bd-fx,none)}
+.sub{position:absolute;left:5%;right:5%;bottom:13%;font-size:4.4cqw;font-weight:700;line-height:1.35;color:#fff;font-family:"Noto Sans TC",system-ui,sans-serif}
+.tags{display:flex;justify-content:space-between;font-size:.8em;margin-bottom:.45em}
+.chip{display:inline-block;padding:0 .7em .112em;border-radius:.4em;color:var(--c);background:rgba(0,0,0,.75);border:.1em solid currentColor}
+.chip.h{--c:var(--host);--ink:#2a1347}
+.chip.g{--c:var(--guest);--ink:#3b2a00}
+.line{text-align:left}
+.line span{background:rgba(0,0,0,.75);color:var(--host);padding:0 .4em .112em;border-radius:.18em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+
+/* 各方案只改 .chip */
+.o-a .chip{background:rgba(0,0,0,.85);box-shadow:0 0 0 .12em rgba(0,0,0,.9)}
+.o-b .chip{background:rgba(0,0,0,.85);box-shadow:0 0 0 .08em #fff}
+.o-c .chip{background:var(--c);color:var(--ink);border-color:transparent;box-shadow:0 0 0 .1em #000}
+.o-d .chip{color:#fff;background:rgba(0,0,0,.85);border:0;border-radius:.3em;padding-left:.5em;padding-right:.5em}
+.o-d .chip.h{border-left:.45em solid var(--c);padding-left:.55em}
+.o-d .chip.g{border-right:.45em solid var(--c);padding-right:.55em}
+
+/* 背景 */
+.stage[data-bd="lav"]{--bd:#cdbbf3;--bd-fx:linear-gradient(rgba(255,255,255,.55) 1px,transparent 1px) 0 0/9% 16%,linear-gradient(90deg,rgba(255,255,255,.55) 1px,transparent 1px) 0 0/9% 16%,radial-gradient(40% 55% at 78% 45%,#b79af0,transparent)}
+.stage[data-bd="paper"]{--bd:#f6f3ec;--bd-fx:linear-gradient(rgba(0,0,0,.07) 1px,transparent 1px) 0 0/9% 16%,linear-gradient(90deg,rgba(0,0,0,.07) 1px,transparent 1px) 0 0/9% 16%}
+.stage[data-bd="yellow"]{--bd:#f2d36a;--bd-fx:radial-gradient(45% 60% at 20% 30%,#f8e8a0,transparent)}
+.stage[data-bd="green"]{--bd:#5fd9a5;--bd-fx:radial-gradient(50% 60% at 70% 30%,#a7f3d0,transparent)}
+.stage[data-bd="skin"]{--bd:#b98068;--bd-fx:radial-gradient(40% 70% at 25% 45%,#e8bfa6,transparent),radial-gradient(35% 50% at 85% 80%,#5b3a30,transparent)}
+.stage[data-bd="dark"]{--bd:#17171d;--bd-fx:radial-gradient(50% 60% at 60% 30%,#2b2b38,transparent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>字幕人名標外框改善方案</h1>
+  <p class="lede">問題：標籤的邊框就是字色，<b>福嶋晴菜的淡紫</b>落在片頭那種薰衣草背景上，邊框跟背景融在一起，標籤輪廓不見。下面五種只改標籤的外框，字號、間距、位置都跟現在站上一樣。用上方的色塊切背景，看哪一種在哪種畫面會失效。</p>
+
+  <div class="pick" role="radiogroup" aria-label="背景">
+    <span>背景</span>
+    <label><input type="radio" name="bd" value="lav" checked><i style="--sw:#cdbbf3">薰衣草（片頭）</i></label>
+    <label><input type="radio" name="bd" value="paper"><i style="--sw:#f6f3ec">白紙</i></label>
+    <label><input type="radio" name="bd" value="yellow"><i style="--sw:#f2d36a">黃色</i></label>
+    <label><input type="radio" name="bd" value="green"><i style="--sw:#5fd9a5">綠色</i></label>
+    <label><input type="radio" name="bd" value="skin"><i style="--sw:#b98068">膚色人像</i></label>
+    <label><input type="radio" name="bd" value="dark"><i style="--sw:#17171d">深色</i></label>
+  </div>
+
+  <div class="grid" id="grid">
+    <section class="opt o-0">
+      <header><span class="badge">現況</span><h2>字色邊框</h2></header>
+      <p>半透明黑底，邊框 0.1em 就是字色。</p>
+      <div class="stage" data-bd="lav"><div class="sub"><div class="tags"><span class="chip h">福嶋晴菜</span><span class="chip g">佐藤榛夏</span></div><div class="line"><span>嗯。像這樣從耳機傳來さとはる的聲音</span></div></div></div>
+      <p class="read" data-edge="#d8b4fe,#fbbf24"></p>
+    </section>
+
+    <section class="opt o-a">
+      <header><span class="badge rec">A・建議</span><h2>字色邊框＋黑色外暈</h2></header>
+      <p>底改 85% 黑，外面再圍 0.12em 黑圈。只加一行 box-shadow，其他不動，字色辨識度保留。</p>
+      <div class="stage" data-bd="lav"><div class="sub"><div class="tags"><span class="chip h">福嶋晴菜</span><span class="chip g">佐藤榛夏</span></div><div class="line"><span>嗯。像這樣從耳機傳來さとはる的聲音</span></div></div></div>
+      <p class="read" data-edge="#000000,#000000"></p>
+    </section>
+
+    <section class="opt o-b">
+      <header><span class="badge">B</span><h2>字色邊框＋白色外環</h2></header>
+      <p>外面圍一圈白線。深背景很清楚，淺背景（白紙、黃）反而失效。</p>
+      <div class="stage" data-bd="lav"><div class="sub"><div class="tags"><span class="chip h">福嶋晴菜</span><span class="chip g">佐藤榛夏</span></div><div class="line"><span>嗯。像這樣從耳機傳來さとはる的聲音</span></div></div></div>
+      <p class="read" data-edge="#ffffff,#ffffff"></p>
+    </section>
+
+    <section class="opt o-c">
+      <header><span class="badge">C</span><h2>實心色塊＋黑色外框</h2></header>
+      <p>整塊填字色、字改深色，外面圍黑線。最醒目，但和字幕底條的「深底彩字」風格不一樣。</p>
+      <div class="stage" data-bd="lav"><div class="sub"><div class="tags"><span class="chip h">福嶋晴菜</span><span class="chip g">佐藤榛夏</span></div><div class="line"><span>嗯。像這樣從耳機傳來さとはる的聲音</span></div></div></div>
+      <p class="read" data-edge="#000000,#000000"></p>
+    </section>
+
+    <section class="opt o-d">
+      <header><span class="badge">D</span><h2>色條＋白字</h2></header>
+      <p>黑底白字，字色改成外側一條粗色條表示是誰。沒有細邊框可以融掉，但輪廓只靠黑底，淺色背景下色條才是辨識重點。</p>
+      <div class="stage" data-bd="lav"><div class="sub"><div class="tags"><span class="chip h">福嶋晴菜</span><span class="chip g">佐藤榛夏</span></div><div class="line"><span>嗯。像這樣從耳機傳來さとはる的聲音</span></div></div></div>
+      <p class="read" data-edge="#262626,#262626"></p>
+    </section>
+  </div>
+
+  <p class="lede" style="margin-top:20px">對比數字是「最外緣顏色」對「該背景平均色」，不含透明度，只當粗略參考；真正的影格會更雜，所以背景多切幾種看。</p>
+</main>
+<script>
+const AVG={lav:'#cdbbf3',paper:'#f6f3ec',yellow:'#f2d36a',green:'#5fd9a5',skin:'#b98068',dark:'#17171d'};
+const lum=h=>{const c=[1,3,5].map(i=>{const v=parseInt(h.slice(i,i+2),16)/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+function paint(bd){
+  document.querySelectorAll('.stage').forEach(s=>s.dataset.bd=bd);
+  document.querySelectorAll('.read').forEach(p=>{
+    const [h,g]=p.dataset.edge.split(',');
+    const f=(c,n)=>{const r=ratio(c,AVG[bd]);return `${n} <b class="${r>=3?'good':'bad'}">${r.toFixed(1)}:1</b>`};
+    p.innerHTML=`外緣對背景　${f(h,'左')}　${f(g,'右')}　（目標 ≥ 3:1）`;
+  });
+}
+document.querySelectorAll('input[name=bd]').forEach(r=>r.addEventListener('change',()=>paint(r.value)));
+paint('lav');
+</script>
+</body>
+</html>

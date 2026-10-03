@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>字幕群設定列方案</title>
+<style>
+:root{
+  --bg:#f4f4f5; --surface:#fff; --ink:#18181b; --ink2:#3f3f46; --muted:#71717a; --line:#e4e4e7;
+  --em:#059669; --em-ink:#047857; --em-bg:#ecfdf5; --em-bd:#a7f3d0; --em-hover:#d1fae5;
+  --in:#6366f1; --in-bd:#c7d2fe; --in-bg:#eef2ff;
+  --key-bd:#d4d4d8;
+  --c-start:#10b981; --c-end:#f43f5e; --c-one:#6366f1; --c-check:#f59e0b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09090b; --surface:#18181b; --ink:#fafafa; --ink2:#d4d4d8; --muted:#a1a1aa; --line:#27272a;
+    --em:#34d399; --em-ink:#6ee7b7; --em-bg:rgba(16,185,129,.12); --em-bd:rgba(52,211,153,.30); --em-hover:rgba(16,185,129,.22);
+    --in:#818cf8; --in-bd:rgba(129,140,248,.40); --in-bg:rgba(129,140,248,.14); --key-bd:#52525b;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:24px;margin:0 0 6px}
+h2{font-size:16px;margin:0}
+.lede{color:var(--muted);margin:0 0 24px}
+.opt{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:16px 20px 20px;margin-bottom:20px}
+.opt header{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.tag{font:700 11px/1 ui-monospace,Consolas,monospace;padding:4px 7px;border-radius:6px;background:var(--in-bg);color:var(--in)}
+.opt p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
+button{white-space:nowrap;font:inherit;cursor:pointer;color:inherit;background:none;border:0;padding:0}
+kbd{font:700 11px/16px ui-monospace,Consolas,monospace;padding:0 6px;border-radius:5px;border:1px solid var(--key-bd);border-bottom-width:2px;background:var(--surface);color:var(--ink2)}
+
+/* 共用：前後跳 */
+.seek{display:inline-flex;align-items:stretch;height:32px;border-radius:10px;border:1px solid var(--em-bd);background:var(--em-bg);overflow:hidden}
+.seek button{padding:0 10px;font:700 12px ui-monospace,Consolas,monospace;color:var(--em-ink)}
+.seek button:hover{background:var(--em-hover)}
+.seek .t{display:flex;align-items:center;padding:0 12px;font:700 14px ui-monospace,Consolas,monospace;color:var(--em);font-variant-numeric:tabular-nums}
+
+/* A 現況 */
+.a-marks{display:inline-flex;align-items:stretch;border-radius:10px;border:1px dashed var(--in-bd);overflow:hidden;background:var(--surface)}
+.a-marks button{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;font-weight:700;color:var(--ink2)}
+.a-marks button+button{border-left:1px dashed var(--in-bd)}
+.a-marks button:hover{background:var(--in-bg)}
+.seek.a button+button,.seek.a .t{border-left:1px solid var(--em-bd)}
+.seek.a button+.t{border-left:1px solid var(--em-bd)}
+
+/* B 單一膠囊 */
+.pill{display:inline-flex;align-items:center;height:40px;padding:4px;border-radius:12px;background:var(--bg);border:1px solid var(--line);gap:2px}
+.pill button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;font-weight:700;color:var(--ink2)}
+.pill button:hover{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.pill .t{padding:0 12px;font:700 15px ui-monospace,Consolas,monospace;color:var(--em);font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
+.pill .sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.pill .sk{font:700 12px ui-monospace,Consolas,monospace;color:var(--em-ink);padding:0 9px}
+
+/* C 色點分類 */
+.c-marks{display:inline-flex;gap:6px}
+.c-marks button{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px 0 9px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;color:var(--ink2)}
+.c-marks button:hover{border-color:var(--c)}
+.c-marks i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.c-marks kbd{margin-left:2px}
+.seek.c{border-radius:999px;padding:0 4px}
+.seek.c button{border-radius:999px;margin:3px 0;padding:0 9px}
+.seek.c .t{padding:0 8px}
+
+/* D 去框極簡 */
+.d-seek{display:inline-flex;align-items:center;height:32px}
+.d-seek button{height:28px;padding:0 8px;border-radius:7px;font:700 12px ui-monospace,Consolas,monospace;color:var(--muted)}
+.d-seek button:hover{background:var(--em-bg);color:var(--em-ink)}
+.d-seek .t{margin:0 6px;padding:0 12px;height:32px;display:flex;align-items:center;font:700 15px ui-monospace,Consolas,monospace;color:var(--em);background:var(--em-bg);border-radius:8px;font-variant-numeric:tabular-nums}
+.d-marks{display:inline-flex;align-items:center;gap:2px;margin-left:12px;padding-left:12px;border-left:1px solid var(--line)}
+.d-marks button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-radius:7px;font-weight:700;color:var(--ink2)}
+.d-marks button:hover{background:var(--in-bg)}
+.d-marks kbd{border-bottom-width:1px;background:transparent}
+</style>
+</head>
+<body>
+<main>
+<h1>字幕群設定列：視覺方案</h1>
+<p class="lede">現況的問題：虛線外框像「未完成的框」、綠與紫兩套外框把一條列切成兩塊、四顆標記同重量、時間只比旁邊鈕大一點。四個方案內容完全一樣，只動樣式。</p>
+
+<section class="opt">
+  <header><span class="tag">A</span><h2>現況</h2></header>
+  <p>綠色實框 + 紫色虛線框，兩個獨立盒子。</p>
+  <div class="bar">
+    <div class="seek a"><button>−15</button><button>−5</button><span class="t">27:26</span><button>+5</button><button>+15</button></div>
+    <div class="a-marks"><button><kbd>[</kbd>起點</button><button><kbd>]</kbd>終點</button><button><kbd>S</kbd>單句</button><button><kbd>?</kbd>待查</button></div>
+  </div>
+</section>
+
+<section class="opt">
+  <header><span class="tag">B</span><h2>單一膠囊（分段控制）</h2></header>
+  <p>一個灰底軌道裝全部，hover 才浮出白底；時間放大、前後跳用淡綠字，不再有任何框線。最像系統原生控件，改動最小。</p>
+  <div class="bar">
+    <div class="pill">
+      <button class="sk">−15</button><button class="sk">−5</button>
+      <span class="t">27:26</span>
+      <button class="sk">+5</button><button class="sk">+15</button>
+      <span class="sep"></span>
+      <button><kbd>[</kbd>起點</button><button><kbd>]</kbd>終點</button><button><kbd>S</kbd>單句</button><button><kbd>?</kbd>待查</button>
+    </div>
+  </div>
+</section>
+
+<section class="opt">
+  <header><span class="tag">C</span><h2>色點分類</h2></header>
+  <p>每種標記配一個色點，與字幕上出現的標記標籤同色（起點綠、終點紅、單句靛、待查琥珀），按下前就知道會出什麼。前後跳改圓角膠囊，兩邊形狀一致。</p>
+  <div class="bar">
+    <div class="seek c"><button>−15</button><button>−5</button><span class="t">27:26</span><button>+5</button><button>+15</button></div>
+    <div class="c-marks">
+      <button style="--c:var(--c-start)"><i></i>起點<kbd>[</kbd></button>
+      <button style="--c:var(--c-end)"><i></i>終點<kbd>]</kbd></button>
+      <button style="--c:var(--c-one)"><i></i>單句<kbd>S</kbd></button>
+      <button style="--c:var(--c-check)"><i></i>待查<kbd>?</kbd></button>
+    </div>
+  </div>
+</section>
+
+<section class="opt">
+  <header><span class="tag">D</span><h2>去框極簡</h2></header>
+  <p>只有時間有底色當視覺錨點，其餘全是無框 ghost 鈕，中間一條細線分隔兩組。畫面最乾淨，代價是可點區域要靠 hover 才看得出來。</p>
+  <div class="bar">
+    <div class="d-seek"><button>−15</button><button>−5</button><span class="t">27:26</span><button>+5</button><button>+15</button></div>
+    <div class="d-marks"><button><kbd>[</kbd>起點</button><button><kbd>]</kbd>終點</button><button><kbd>S</kbd>單句</button><button><kbd>?</kbd>待查</button></div>
+  </div>
+</section>
+</main>
+</body>
+</html>
