@@ -339,24 +339,30 @@ function validateEpisode(fileName) {
     } else if (!quoteRow) {
       report(errors, relativePath, `精華片段「${heading}」的精華句不在這段時間的逐字稿裡`);
     }
-    // 起鋪落收：落＝精華句那一列，不另外寫。起＝片段開頭，四拍時間嚴格遞增、都在片段內、都對得到逐字稿的列
-    if (beats.length) {
-      const order = beats.map((beat) => beat.kind).join("");
-      if (order !== "起鋪收") {
-        report(errors, relativePath, `精華片段「${heading}」要依序各寫一行 - 起、- 鋪、- 收（現在是 ${order}）`);
-      } else if (quoteRow) {
-        const [rise, build, close] = beats.map((beat) => beat.seconds);
-        if (rise !== start) {
-          report(errors, relativePath, `精華片段「${heading}」的起 [${beats[0].time}] 要等於片段開頭`);
-        }
-        if (!(rise < build && build < quoteRow.seconds && quoteRow.seconds < close && close < end)) {
-          report(errors, relativePath, `精華片段「${heading}」的時間要 起 < 鋪 < 落（精華句那列）< 收 < 迄`);
-        }
+    // 起鋪落收：落＝精華句那一列，不另外寫。起＝片段開頭，各拍時間嚴格遞增、都在片段內、都對得到逐字稿的列。
+    // 落就是最後一列時沒東西可收、落就是第 2 列時沒東西可鋪，只有這兩種可以少寫一行
+    const order = beats.map((beat) => beat.kind).join("");
+    const quoteIndex = quoteRow ? range.indexOf(quoteRow) : -1;
+    const allowed = ["起鋪收", ...(quoteIndex === range.length - 1 ? ["起鋪"] : []), ...(quoteIndex === 1 ? ["起收"] : [])];
+    if (!allowed.includes(order)) {
+      report(
+        errors,
+        relativePath,
+        `精華片段「${heading}」要依序寫 - 起、- 鋪、- 收各一行，只有落是最後一列可省收、落是第 2 列可省鋪（現在是 ${order || "都沒寫"}）`,
+      );
+    } else if (quoteRow) {
+      if (beats[0].seconds !== start) {
+        report(errors, relativePath, `精華片段「${heading}」的起 [${beats[0].time}] 要等於片段開頭`);
       }
-      for (const beat of beats) {
-        if (!lineSeconds.has(beat.seconds)) {
-          report(errors, relativePath, `精華片段「${heading}」的${beat.kind} [${beat.time}] 對不到逐字稿任何一列`);
-        }
+      const close = beats.find((beat) => beat.kind === "收");
+      const times = [...beats.filter((beat) => beat !== close).map((beat) => beat.seconds), quoteRow.seconds, ...(close ? [close.seconds] : []), end];
+      if (times.some((time, index) => index && time <= times[index - 1])) {
+        report(errors, relativePath, `精華片段「${heading}」的時間要 起 < 鋪 < 落（精華句那列）< 收 < 迄`);
+      }
+    }
+    for (const beat of beats) {
+      if (!lineSeconds.has(beat.seconds)) {
+        report(errors, relativePath, `精華片段「${heading}」的${beat.kind} [${beat.time}] 對不到逐字稿任何一列`);
       }
     }
     if (leansBack(range[0].text)) {

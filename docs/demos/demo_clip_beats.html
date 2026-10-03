@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>精華起鋪落收審稿</title>
+<style>
+  :root { color-scheme: dark; --bg: #09090b; --fg: #f4f4f5; --body: #d4d4d8; --muted: #a1a1aa; --line: #27272a; --panel: #18181b;
+    --host: #c084fc; --guest: #fbbf24; --add: #4ade80; --warn: #fb923c; }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 64px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); line-height: 1.65;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  .lead { color: var(--muted); font-size: 15px; margin: 0 0 16px; max-width: 46em; }
+  .nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .nums div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .nums b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .nums span { color: var(--muted); font-size: 13px; }
+  h2.sec { font-size: 17px; margin: 36px 0 10px; }
+  ol.ask { padding-left: 22px; max-width: 46em; } ol.ask li { margin: 10px 0; font-size: 15px; } ol.ask li p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .bar { position: sticky; top: 0; z-index: 5; background: rgba(9,9,11,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line);
+    margin: 24px -16px 0; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 14px; }
+  .bar .lbl { color: var(--muted); }
+  .bar label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; white-space: nowrap; }
+  .eps { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+  .eps a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .eps a small { margin-left: 4px; color: #71717a; }
+  section.ep h2 { font-size: 18px; margin: 36px 0 12px; }
+  section.ep h2 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  /* 下面照 ClipsMode.tsx 深色模式的 class 換算 */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 32px; }
+  @media (min-width: 768px) { .panel { padding: 48px; } }
+  .clip { padding-top: 32px; margin-top: 32px; border-top: 1px solid var(--line); }
+  .clip:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
+  .meta { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  .meta .no { margin-left: auto; color: #52525b; font-size: 12px; }
+  .pill { padding: 2px 10px; border-radius: 999px; background: rgba(192,132,252,.1); color: var(--host); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pill.sm { font-size: 13px; padding: 1px 8px; }
+  .clip h3 { font-size: 20px; font-weight: 700; margin: 12px 0 0; line-height: 1.4; }
+  blockquote { margin: 16px 0 0; border-left: 4px solid var(--host); padding-left: 16px; }
+  blockquote.g { border-color: var(--guest); }
+  blockquote .q { font-size: 18px; font-weight: 700; line-height: 1.625; margin: 0; }
+  blockquote .by { font-size: 14px; font-weight: 700; margin: 4px 0 0; color: var(--host); }
+  blockquote.g .by { color: var(--guest); }
+  .beats { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 6px; }
+  .beats li { display: grid; grid-template-columns: 1.5rem 3rem minmax(0, 1fr); column-gap: 6px; align-items: baseline; font-size: 14px; line-height: 1.625; }
+  @media (min-width: 640px) { .beats li { font-size: 15px; } }
+  .beats b { color: var(--host); }
+  .beats .t { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .beats .x { color: var(--body); }
+  .beats li.fall .x { color: var(--fg); font-weight: 700; }
+  .beats em { font-style: normal; font-size: 12px; font-weight: 700; margin-left: 6px; white-space: nowrap; color: var(--host); }
+  .beats em.g { color: var(--guest); }
+  .beats li.add b, .beats li.add .x { color: var(--add); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 700;
+    border: 1px solid #3f3f46; background: #27272a; color: var(--body); }
+  .btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .flag { margin-top: 14px; border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--body); }
+  .flag.short { border: 1px dashed rgba(251,146,60,.55); }
+  .flag.short strong { color: var(--warn); }
+  .flag.info { border: 1px dashed #3f3f46; color: var(--muted); }
+  .alt { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .alt-h { color: var(--muted); font-size: 13px; }
+  .alt .beats { margin-top: 6px; }
+  /* 精華句兩處的三種排法 */
+  body:has(#dup-b:checked) .clip > blockquote { display: none; }
+  body:has(#dup-c:checked) .clip > .beats li.fall { display: none; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  thead th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  td.nw { white-space: nowrap; color: var(--muted); }
+  td.old { color: #71717a; text-decoration: line-through; text-decoration-color: rgba(248,113,113,.5); }
+  td.why { color: var(--muted); font-size: 13px; min-width: 9em; }
+  pre { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 13px; overflow-x: auto; }
+  ul.plan { max-width: 46em; padding-left: 20px; font-size: 15px; } ul.plan li { margin: 6px 0; }
+  code { font-size: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>精華片段：48 段的起、鋪、落、收</h1>
+  <p class="lead">落就是精華句，不另外寫；要寫的是起、鋪、收。全部照「逐字稿講到的才寫、「」裡是原文、保留好像大概可能」寫成，下面照網站精華分頁的畫法排出來。看過、你點頭之後才寫進集數檔上線。</p>
+  <div class="nums">
+    <div><b>48 段</b><span>之前說 46 是我少算 2 段</span></div>
+    <div><b>138 行</b><span>42 段 × 3 行＋6 段 × 2 行</span></div>
+    <div><b>0 問題</b><span>時間、順序、原文逐條核對</span></div>
+    <div><b>85 字</b><span>最長一行（第 1 回 #1 鋪）</span></div>
+  </div>
+
+  <h2 class="sec">要你決定</h2>
+  <ol class="ask">
+    <li><b>措辭</b>：逐段看，要改的直接說「第 N 回 #N 鋪改成…」。第 12 回 v2 你看過，這次照寫作規則改了 11 行，對照表在最下面。</li>
+    <li><b>6 段短段</b>（橘框）：落剛好是最後一列（5 段，沒有收）或第 2 列（1 段，沒有鋪）。<p>建議都不延長：這幾段停在笑點上，延長會把笑點後面的話也剪進來。其中 4 段可以延長補齊，綠字是補上的那行。</p></li>
+    <li><b>精華句出現兩次</b>：引言框一次、落那行一次，這是照你給的兩張圖（上線版的引言框＋修正後的起鋪落收）混成的結果。下面的切換列可以比三種排法（往下捲會固定在頂端）。<p>建議維持 A：引言框先抓住人，落那行讓時間順序完整。嫌重複就選 B，回到 v2 的樣子。</p></li>
+  </ol>
+
+  <div class="bar">
+    <span class="lbl">精華句：</span>
+    <label><input type="radio" name="dup" id="dup-a" checked> A 兩處都留（現在）</label>
+    <label><input type="radio" name="dup" id="dup-b"> B 拿掉引言框（v2）</label>
+    <label><input type="radio" name="dup" id="dup-c"> C 拿掉落那行</label>
+  </div>
+  <nav class="eps"><a href="#ep01">1<small>4</small></a><a href="#ep02">2<small>4</small></a><a href="#ep03">3<small>4</small></a><a href="#ep04">4<small>5</small></a><a href="#ep05">5<small>4</small></a><a href="#ep06">6<small>3</small></a><a href="#ep07">7<small>4</small></a><a href="#ep08">8<small>4</small></a><a href="#ep09">9<small>3</small></a><a href="#ep10">10<small>5</small></a><a href="#ep11">11<small>3</small></a><a href="#ep12">12<small>5</small></a></nav>
+
+  <section class="ep" id="ep01"><h2>第 1 回<small>福嶋一個人・4 段</small></h2><div class="panel"><article class="clip" id="ep01-1">
+  <div class="meta"><span class="pill">01:17–02:37</span><span>1 分 20 秒</span><span class="no">#1</span></div>
+  <h3>自我介紹到一半，忘了檔案寫什麼</h3>
+  <blockquote class="h"><p class="q">請大家一邊想著「這傢伙真隨便」一邊聽吧。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">01:17</span><span class="x">開始自我介紹：大阪府出身</span></li><li class=""><b>鋪</b><span class="t">01:30</span><span class="x">個人檔案寫了什麼忘了，馬上講得出來的特長是賭場荷官，記得有寫魔術方塊 → 興趣「算了，就用現在的自我介紹吧」：最近迷上解謎和桌遊 → 不太會一個人講個不停，「超級不安的」</span></li><li class="fall"><b>落</b><span class="t">02:31</span><span class="x">「請大家一邊想著「這傢伙真隨便」一邊聽吧。」<em class="h">福嶋</em></span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag short"><strong>只有起、鋪</strong>　落是這段最後一列，後面直接換話題，延長不了。</div>
+</article>
+<article class="clip" id="ep01-2">
+  <div class="meta"><span class="pill">14:56–17:17</span><span>2 分 21 秒</span><span class="no">#2</span></div>
+  <h3>今年的抱負是出門，人在棉被裡</h3>
+  <blockquote class="h"><p class="q">所以要趁現在還能出門的時候出門，一邊這麼想，一邊裹著棉被。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">14:56</span><span class="x">來信：立目標總是三分鐘熱度，想聽福嶋今年春天的抱負</span></li><li class=""><b>鋪</b><span class="t">15:24</span><span class="x">自己也是三分鐘熱度，「大概一分鐘熱度就結束了」→ 姑且說的話，大概是「出門」：沒事的日子窩在家最幸福，但天氣剛好變暖，現在不出門要什麼時候出門</span></li><li class="fall"><b>落</b><span class="t">16:43</span><span class="x">「所以要趁現在還能出門的時候出門，一邊這麼想，一邊裹著棉被。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">16:53</span><span class="x">抱負嘛「先說再說」；出門的日子說不定會在 Replive 說「我出門囉」，「先給自己留個退路」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep01-3">
+  <div class="meta"><span class="pill">28:11–30:52</span><span>2 分 41 秒</span><span class="no">#3</span></div>
+  <h3>チピチピチャパチャパ，做成 ASMR</h3>
+  <blockquote class="h"><p class="q">チピチピチャパチャパまとぺ吧。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">28:11</span><span class="x">來信：パフェモカ影片裡福嶋感染的貓咪迷因チピチピチャパチャパ，說不定能用在オノマトペ上，想聽她實際演示</span></li><li class=""><b>鋪</b><span class="t">28:37</span><span class="x">「用 ASMR 做很有趣」→ 開始チピチピ、チャパチャパ，到一半「從前面一點開始吧」→ 做完：「這算既有的オノマトペ嗎？」</span></li><li class="fall"><b>落</b><span class="t">30:38</span><span class="x">「チピチピチャパチャパまとぺ吧。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">30:42</span><span class="x">如果這能變成適合 ASMR 的就好了</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep01-4">
+  <div class="meta"><span class="pill">38:47–39:35</span><span>48 秒</span><span class="no">#4</span></div>
+  <h3>第一位來賓，是當年照顧她的前輩</h3>
+  <blockquote class="h"><p class="q">竟然會來我的個人廣播。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">38:47</span><span class="x">預告下次 4 月 25 日播出，是來賓回</span></li><li class=""><b>鋪</b><span class="t">38:59</span><span class="x">節目的第一位來賓請到了今泉 →「鼓掌鼓掌鼓掌」，好開心</span></li><li class="fall"><b>落</b><span class="t">39:13</span><span class="x">「竟然會來我的個人廣播。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">39:26</span><span class="x">「好感慨。」很期待大家寄信給今泉</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep02"><h2>第 2 回<small>來賓 今泉りおな・4 段</small></h2><div class="panel"><article class="clip" id="ep02-1">
+  <div class="meta"><span class="pill">05:41–07:19</span><span>1 分 38 秒</span><span class="no">#1</span></div>
+  <h3>錄音時還沒到生日，禮物先到了</h3>
+  <blockquote class="g"><p class="q">絕對不能錯過時機。</p><p class="by">—— 今泉りおな</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">05:41</span><span class="x">今泉：大家聽到時，福嶋的生日活動已經結束了 → 福嶋：「時間軸扭曲了」</span></li><li class=""><b>鋪</b><span class="t">06:24</span><span class="x">今泉：有東西想交給妳，是節目的大家送的禮物 → 福嶋：「這個現在打開可以嗎？」</span></li><li class="fall"><b>落</b><span class="t">07:00</span><span class="x">「絕對不能錯過時機。」<em class="g">今泉</em></span></li><li class=""><b>收</b><span class="t">07:06</span><span class="x">福嶋：要是照流程開始唸普通信件，就會錯過時機了，「謝謝妳叫住我。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep02-2">
+  <div class="meta"><span class="pill">10:19–12:32</span><span>2 分 13 秒</span><span class="no">#2</span></div>
+  <h3>家裡電視並排 4 台的玩家家庭</h3>
+  <blockquote class="h"><p class="q">簡直是遊戲的菁英教育。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">10:19</span><span class="x">聊「只要聽就好的動畫」：福嶋洗碗、晾衣服時常這樣看</span></li><li class=""><b>鋪</b><span class="t">10:45</span><span class="x">今泉大概比較常一邊打電動一邊看動畫，「像是把右眼和左眼分開用」→ 從小就這樣，家裡電視並排擺了 4 台，「玩家家庭」，讓全家同時玩</span></li><li class="fall"><b>落</b><span class="t">12:07</span><span class="x">「簡直是遊戲的菁英教育。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">12:10</span><span class="x">今泉：「自然就練成了」→ 福嶋：也請マルルさん並排擺擺看，「請加油。我大概是不行。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep02-3">
+  <div class="meta"><span class="pill">14:13–15:42</span><span>1 分 29 秒</span><span class="no">#3</span></div>
+  <h3>第一印象：比想像中嬌小的大前輩</h3>
+  <blockquote class="g"><p class="q">因為那時我就是野生的今泉嘛</p><p class="by">—— 今泉りおな</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">14:13</span><span class="x">今泉：第一次見面大概是那齣舞台劇的讀本</span></li><li class=""><b>鋪</b><span class="t">14:27</span><span class="x">福嶋：「比想像中還嬌小」；那時才第 1 年，想說前輩會不會更盛氣凌人、更像大人 → 結果「在好的意義上有種孩子氣」，「就覺得好可愛」</span></li><li class="fall"><b>落</b><span class="t">15:31</span><span class="x">「因為那時我就是野生的今泉嘛」<em class="g">今泉</em></span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag short"><strong>只有起、鋪</strong>　落是這段最後一列，後面直接換話題，延長不了。</div>
+</article>
+<article class="clip" id="ep02-4">
+  <div class="meta"><span class="pill">34:27–35:25</span><span>58 秒</span><span class="no">#4</span></div>
+  <h3>把わ、か、ん刪掉，剩下的是</h3>
+  <blockquote class="h"><p class="q">這樣剩下的字就是「おめでとう（恭喜）」。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">34:27</span><span class="x">由福嶋解說</span></li><li class=""><b>鋪</b><span class="t">34:33</span><span class="x">把おわん、かめん、でんわ、かんとう用平假名寫下來 → 題目「この答えは絶対わかんないね」，想說是「沒有（ない）わ、か、ん」的意思 → 刪掉わ、か、ん</span></li><li class="fall"><b>落</b><span class="t">35:06</span><span class="x">「這樣剩下的字就是「おめでとう（恭喜）」。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">35:13</span><span class="x">今泉：「耶——！」→ 福嶋：是很棒的題目 → 今泉：「感覺明明馬上就能解開，結果完全不懂。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep03"><h2>第 3 回<small>福嶋一個人・4 段</small></h2><div class="panel"><article class="clip" id="ep03-1">
+  <div class="meta"><span class="pill">04:29–06:02</span><span>1 分 33 秒</span><span class="no">#1</span></div>
+  <h3>嗓子啞了，救了她的是雞蛋豆腐</h3>
+  <blockquote class="h"><p class="q">各位，雞蛋豆腐真偉大。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">04:29</span><span class="x">「第一次聽到自己這麼啞的聲音」，有點傷到喉嚨 → 請大家在第 3 回好好聽聽沙啞的福嶋</span></li><li class=""><b>鋪</b><span class="t">05:29</span><span class="x">喉嚨超痛的時候，有個食物幫了超大的忙</span></li><li class="fall"><b>落</b><span class="t">05:40</span><span class="x">「各位，雞蛋豆腐真偉大。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">05:44</span><span class="x">對喉嚨很好、滑溜地就吃進去、好吃 →「發明雞蛋豆腐的人，謝謝你們。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep03-2">
+  <div class="meta"><span class="pill">07:51–09:17</span><span>1 分 26 秒</span><span class="no">#2</span></div>
+  <h3>聽眾叫ハルナー？由ハルナ來說太害羞</h3>
+  <blockquote class="h"><p class="q">不過由ハルナ來說ハルナー，可能有點害羞。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">07:51</span><span class="x">來信：聽眾稱呼提案ハルナー（はるな＋リスナー），問候語提案ペラッパ（翻頁＋オノマトペ）</span></li><li class=""><b>鋪</b><span class="t">08:24</span><span class="x">ハルナー：「這不會有點太福嶋晴菜了嗎？」</span></li><li class="fall"><b>落</b><span class="t">08:30</span><span class="x">「不過由ハルナ來說ハルナー，可能有點害羞。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">08:39</span><span class="x">不過ペラッパ「超棒的」：書頁啪啦啪啦翻開，再「哇」地說你好 →「ペラッパ。你好。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep03-3">
+  <div class="meta"><span class="pill">15:39–16:15</span><span>36 秒</span><span class="no">#3</span></div>
+  <h3>PV 沒聲音，她當場配了一次</h3>
+  <blockquote class="h"><p class="q">我就把影片裡應該要播出的配音，當場配了一次。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">15:39</span><span class="x">來信：PV 影片聲音出問題時，福嶋說「今天總覺得想去哪裡走走」撐住場面</span></li><li class=""><b>鋪</b><span class="t">15:54</span><span class="x">那時聲音出不來</span></li><li class="fall"><b>落</b><span class="t">15:59</span><span class="x">「我就把影片裡應該要播出的配音，當場配了一次。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">16:11</span><span class="x">被說「真的不愧是妳」，好開心</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep03-4">
+  <div class="meta"><span class="pill">31:47–34:27</span><span>2 分 40 秒</span><span class="no">#4</span></div>
+  <h3>戀愛喜劇的主角和難讀的書，共通點是</h3>
+  <blockquote class="h"><p class="q">理由是，兩者都是『さっしが悪い』。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">31:47</span><span class="x">謎題：把戀愛喜劇的主角比作「這本書好難讀」，理由是兩者都是「某某很差」</span></li><li class=""><b>鋪</b><span class="t">32:24</span><span class="x">試了「很難看」、眼睛不好、溫柔、熱血 → 戀愛喜劇主角那邊像慣用句 →「察しが悪い（遲鈍）」；書難讀是「冊子（さっし）」本身不好</span></li><li class="fall"><b>落</b><span class="t">34:17</span><span class="x">「理由是，兩者都是『さっしが悪い』。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">34:22</span><span class="x">「砰。喔，好暢快。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep04"><h2>第 4 回<small>來賓 真野美月・5 段</small></h2><div class="panel"><article class="clip" id="ep04-1">
+  <div class="meta"><span class="pill">11:35–13:24</span><span>1 分 49 秒</span><span class="no">#1</span></div>
+  <h3>狗狗屁股和蘋果糖，到現在還沒原諒</h3>
+  <blockquote class="h"><p class="q">那個我到現在還沒原諒。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">11:35</span><span class="x">白天場玩了反射神經問答：一下子跳出 9 張左右的圖片，時間超短</span></li><li class=""><b>鋪</b><span class="t">12:05</span><span class="x">有幾張分不清是麵包還是狗：「這絕對是麵包」，放大是套著麵包袋的狗狗屁股 → 蘋果的題目，「這也是蘋果喔」圈的是蘋果糖</span></li><li class="fall"><b>落</b><span class="t">13:09</span><span class="x">「那個我到現在還沒原諒。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">13:12</span><span class="x">真野：「蘋果糖也是蘋果嘛」，「雖然很不甘心，但我接受了」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep04-2">
+  <div class="meta"><span class="pill">13:46–14:41</span><span>55 秒</span><span class="no">#2</span></div>
+  <h3>福之助的由來？沒有，還會吃醋</h3>
+  <blockquote class="g"><p class="q">我吃醋了，說「不行」。</p><p class="by">—— 真野美月</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">13:46</span><span class="x">來信：真野叫福嶋「福之助」，有什麼由來？</span></li><li class=""><b>鋪</b><span class="t">14:01</span><span class="x">真野：「叫福之助的只有我嘛」，由來是「沒有。就是沒有嘛。」，大概是唸起來順 → 剛剛工作人員問「我也可以這樣叫嗎？」</span></li><li class="fall"><b>落</b><span class="t">14:30</span><span class="x">「我吃醋了，說「不行」。」<em class="g">真野</em></span></li><li class=""><b>收</b><span class="t">14:33</span><span class="x">福嶋：「只屬於まのみん的」；真野：「只是不小心吃醋了」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep04-3">
+  <div class="meta"><span class="pill">18:55–19:35</span><span>40 秒</span><span class="no">#3</span></div>
+  <h3>甜到從耳朵蛀牙的歌聲</h3>
+  <blockquote class="g"><p class="q">聽了就會從耳朵蛀牙。</p><p class="by">—— 真野美月</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">18:55</span><span class="x">真野：福嶋的聲音超可愛</span></li><li class=""><b>鋪</b><span class="t">19:03</span><span class="x">真野：也超喜歡妳演戲，可是唱歌時「特別會發出甜到快蛀牙的聲音」→ 聽著想「我現在是不是蛀牙變多了」</span></li><li class="fall"><b>落</b><span class="t">19:23</span><span class="x">「聽了就會從耳朵蛀牙。」<em class="g">真野</em></span></li><li class=""><b>收</b><span class="t">19:26</span><span class="x">真野：「聽完得先刷個牙」，「我超喜歡的，妳的歌聲也是」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep04-4">
+  <div class="meta"><span class="pill">23:01–24:09</span><span>1 分 8 秒</span><span class="no">#4</span></div>
+  <h3>唱到紅色ピクミン，手燈就換紅色</h3>
+  <blockquote class="h"><p class="q">有人唱到紅色ピクミン就換成紅色，唱到藍色ピクミン就換成藍色。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">23:01</span><span class="x">有點擔心會怎麼樣，歌從紅色ピクミン那段開始時，大家「啊，是這首歌」的反應</span></li><li class=""><b>鋪</b><span class="t">23:17</span><span class="x">真野從小窗戶看：拿手燈的大家「好像オリマー和ピクミン們」→ 福嶋：大概第 1 部知道會唱《種の歌》，第 2 部就配合好了</span></li><li class="fall"><b>落</b><span class="t">23:38</span><span class="x">「有人唱到紅色ピクミン就換成紅色，唱到藍色ピクミン就換成藍色。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">23:44</span><span class="x">真野：「欸，真的假的？」→ 福嶋：好厲害，「還好我沒笑出來」，「很感動」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep04-5">
+  <div class="meta"><span class="pill">24:41–25:09</span><span>28 秒</span><span class="no">#5</span></div>
+  <h3>拔了 5 顆智齒，臉像將棋棋子</h3>
+  <blockquote class="h"><p class="q">臉太像將棋的棋子了</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">24:41</span><span class="x">真野最近做了很多新的事，能說的很少</span></li><li class=""><b>鋪</b><span class="t">24:48</span><span class="x">真野：「我拔了智齒」，拔了 5 顆，傳了照片給福嶋</span></li><li class="fall"><b>落</b><span class="t">24:58</span><span class="x">「臉太像將棋的棋子了」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">25:01</span><span class="x">福嶋：「妳真的很努力了」；真野：「所以才不是萬全的狀態」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep05"><h2>第 5 回<small>福嶋一個人・4 段</small></h2><div class="panel"><article class="clip" id="ep05-1">
+  <div class="meta"><span class="pill">00:46–01:54</span><span>1 分 8 秒</span><span class="no">#1</span></div>
+  <h3>一個人主持，連喝水的時機都沒有</h3>
+  <blockquote class="h"><p class="q">一個人的話沒有喝水的時機，後半就會越來越累。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">00:46</span><span class="x">自己聽一個人的那幾回，覺得情緒完全不一樣：「我有這麼平淡嗎」</span></li><li class=""><b>鋪</b><span class="t">01:18</span><span class="x">有來賓時就很熱鬧 →「算了，就當我是這種人吧」→ 一個人的話畢竟就是一個人</span></li><li class="fall"><b>落</b><span class="t">01:38</span><span class="x">「一個人的話沒有喝水的時機，後半就會越來越累。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">01:47</span><span class="x">這是一個人聊到第 3 次才發現的</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep05-2">
+  <div class="meta"><span class="pill">10:45–11:48</span><span>1 分 3 秒</span><span class="no">#2</span></div>
+  <h3>聽眾的名字，決定了</h3>
+  <blockquote class="h"><p class="q">就是しおりネーム（書籤名）。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">10:45</span><span class="x">一個人決定真的滿難的；聽眾的名字叫しおり這個點子，有兩位聽眾都提了</span></li><li class=""><b>鋪</b><span class="t">11:06</span><span class="x">大家寄來的信在一頁一頁之中變成しおり，「我覺得超棒的」→「現在決定了。我決定了。」</span></li><li class="fall"><b>落</b><span class="t">11:33</span><span class="x">「就是しおりネーム（書籤名）。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">11:37</span><span class="x">「雖說是決定了，其實是我決定的」，謝謝大家</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep05-3">
+  <div class="meta"><span class="pill">24:37–25:35</span><span>58 秒</span><span class="no">#3</span></div>
+  <h3>高中文化祭沒體會到的團結</h3>
+  <blockquote class="h"><p class="q">啊，原來大家團結一心打造作品是這麼回事</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">24:37</span><span class="x">在 AMG 有大家一起打造一個作品的經驗</span></li><li class=""><b>鋪</b><span class="t">24:46</span><span class="x">高中文化祭演過戲：班上對演戲害羞比較強、有點隨便做做，自己也沒那麼起勁 → 進了專門學校，大家一起演戲時投入的程度差太多了</span></li><li class="fall"><b>落</b><span class="t">25:19</span><span class="x">「啊，原來大家團結一心打造作品是這麼回事」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">25:30</span><span class="x">果然朝向的方向一樣很重要，我這麼覺得</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep05-4">
+  <div class="meta"><span class="pill">37:50–39:24</span><span>1 分 34 秒</span><span class="no">#4</span></div>
+  <h3>寫了 8 種口味的萬用牌，偏偏沒有抹茶</h3>
+  <blockquote class="h"><p class="q">哇，剛剛才高興的，結果沒有。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">37:50</span><span class="x">第 2 回合翻牌：抹茶，又一張抹茶 →「先放著」</span></li><li class=""><b>鋪</b><span class="t">38:03</span><span class="x">木さぎいつかさん寫了 8 種口味，好像當作萬用牌處理 →「抹茶現在是湊齊了嗎？」→ 8 種裡沒有抹茶</span></li><li class="fall"><b>落</b><span class="t">38:49</span><span class="x">「哇，剛剛才高興的，結果沒有。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">38:56</span><span class="x">兩張抹茶是一對，「明明抽到了萬用牌」→ 第 2 回合結果一對，2 倍</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep06"><h2>第 6 回<small>來賓 藤本侑里・3 段</small></h2><div class="panel"><article class="clip" id="ep06-1">
+  <div class="meta"><span class="pill">07:27–08:05</span><span>38 秒</span><span class="no">#1</span></div>
+  <h3>當來賓還問「誰先唸」，一年的習慣</h3>
+  <blockquote class="g"><p class="q">已經是習慣了嘛，1 年來的習慣，一不小心就問了。</p><p class="by">—— 藤本侑里</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">07:27</span><span class="x">福嶋：唸普通信件，藤本剛才問「那要誰先唸？」</span></li><li class=""><b>鋪</b><span class="t">07:35</span><span class="x">可是這次是藤本來當來賓</span></li><li class="fall"><b>落</b><span class="t">07:41</span><span class="x">「已經是習慣了嘛，1 年來的習慣，一不小心就問了。」<em class="g">藤本</em></span></li><li class=""><b>收</b><span class="t">07:51</span><span class="x">藤本：「好丟臉。」→ 福嶋：聽我唸就好 → 藤本：「我會好好聽福嶋晴菜的好聲音。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep06-2">
+  <div class="meta"><span class="pill">30:12–33:30</span><span>3 分 18 秒</span><span class="no">#2</span></div>
+  <h3>免疫組織 × 不理人的關西人，謎底是</h3>
+  <blockquote class="g"><p class="q">扁桃腺（返答せん，不回答）。</p><p class="by">—— 藤本侑里</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">30:12</span><span class="x">謎かけ：「把免疫組織，比作叫了也不理人的關西人。理由是？」</span></li><li class=""><b>鋪</b><span class="t">30:24</span><span class="x">福嶋想到シカト（不理人），藤本猜「返事しやん（不回話）」→ 藤本：「真的想不出來耶」→ 提示 1：「感冒時會腫起來的免疫組織」→ 福嶋說出扁桃腺</span></li><li class="fall"><b>落</b><span class="t">33:25</span><span class="x">「扁桃腺（返答せん，不回答）。」<em class="g">藤本</em></span></li><li class=""><b>收</b><span class="t">33:26</span><span class="x">福嶋：「好，大正確。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep06-3">
+  <div class="meta"><span class="pill">41:31–42:11</span><span>40 秒</span><span class="no">#3</span></div>
+  <h3>收尾時，節目名說成はるゆり</h3>
+  <blockquote class="h"><p class="q">啊，說錯了。不是はるゆり。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">41:31</span><span class="x">尾聲問藤本感想：「はるゆり感覺怎麼樣？」</span></li><li class="fall"><b>落</b><span class="t">41:36</span><span class="x">「啊，說錯了。不是はるゆり。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">41:38</span><span class="x">藤本：「はるまとぺ。」開始的瞬間「はるゆり的空氣就開始流動了」→ 福嶋：「跟侑里ちゃん在一起，果然就會變成那種感覺呢。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag short"><strong>只有起、收</strong>　落是第 2 列，起和落中間沒有東西可鋪。<div class="alt"><div class="alt-h">要補齊的話：起訖改成 <span class="pill sm">41:27–42:11</span>（多 4 秒），起改到前一列、原本的起變成鋪</div><ol class="beats"><li class="add "><b>起</b><span class="t">41:27</span><span class="x">第 6 回到了尾聲的時間</span></li><li class="add "><b>鋪</b><span class="t">41:31</span><span class="x">問藤本：「はるゆり感覺怎麼樣？」</span></li></ol></div></div>
+</article></div></section>
+<section class="ep" id="ep07"><h2>第 7 回<small>福嶋一個人・4 段</small></h2><div class="panel"><article class="clip" id="ep07-1">
+  <div class="meta"><span class="pill">05:21–06:34</span><span>1 分 13 秒</span><span class="no">#1</span></div>
+  <h3>昆布水沾麵，為什麼該在夏天吃</h3>
+  <blockquote class="h"><p class="q">冬天吃昆布水沾麵的話，會越來越冷，自己也會一邊凍僵一邊吃。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">05:21</span><span class="x">夏天拉麵常有的事還有 1 個：昆布水沾麵是不是夏天吃比較好</span></li><li class=""><b>鋪</b><span class="t">05:35</span><span class="x">麵泡在昆布水裡，很多店沒辦法做熱盛，湯也很容易變涼</span></li><li class="fall"><b>落</b><span class="t">05:56</span><span class="x">「冬天吃昆布水沾麵的話，會越來越冷，自己也會一邊凍僵一邊吃。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">06:05</span><span class="x">滿怕冷的，冬天吃常想「好吃但越來越冷。好冷」→ 推薦夏天吃，還要在冷氣不會直吹的地方</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep07-2">
+  <div class="meta"><span class="pill">15:30–16:33</span><span>1 分 3 秒</span><span class="no">#2</span></div>
+  <h3>最後的除靈，倒成意想不到的樣子</h3>
+  <blockquote class="h"><p class="q">倒下的樣子好帥喔</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">15:30</span><span class="x">千秋樂說完「最後的除靈」，照流程要バタン一聲倒下</span></li><li class=""><b>鋪</b><span class="t">15:42</span><span class="x">平常往前パーン地倒，那次臉朝上バサー地倒下去，「啊，倒成了意想不到的樣子」→ 在旁邊演出的駒形さん跟她說</span></li><li class="fall"><b>落</b><span class="t">16:01</span><span class="x">「倒下的樣子好帥喔」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">16:12</span><span class="x">「我超開心的」；自己也沒想到會那樣，是一時太用力</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag info">精華句是在旁邊演出的駒形さん對她說的話，由福嶋轉述，所以引言框和落都標福嶋。</div>
+</article>
+<article class="clip" id="ep07-3">
+  <div class="meta"><span class="pill">23:15–27:19</span><span>4 分 4 秒</span><span class="no">#3</span></div>
+  <h3>1 比 29 的課，分組作業要低頭</h3>
+  <blockquote class="h"><p class="q">可能是恐怖片。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">23:15</span><span class="x">來信：大學有堂課男女比 1 比 29，男生只有他 1 個；當了半年空氣，下學期老師說要 5、6 個人一組做分組作業 →「幾分鐘後，我正使盡全力低頭拜託」</span></li><li class=""><b>鋪</b><span class="t">24:49</span><span class="x">「文章寫得超有趣的」→ 完全不認識的女生堆裡，當了半年空氣突然要分組，「一定很難受吧」→ 判決「ノット青春（不是青春）」</span></li><li class="fall"><b>落</b><span class="t">26:17</span><span class="x">「可能是恐怖片。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">26:27</span><span class="x">好好拜託「請讓我加入」很努力了，「帶著那份勇氣去做分組作業的你，很厲害」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep07-4">
+  <div class="meta"><span class="pill">27:41–31:17</span><span>3 分 36 秒</span><span class="no">#4</span></div>
+  <h3>炒麵麵包撕下來給她，回家大哭</h3>
+  <blockquote class="h"><p class="q">意思是「你做了很可惜的事呢」。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">27:41</span><span class="x">「りんご」さん來信：高中福利社買到炒麵麵包，同班女生說「給我一口」</span></li><li class=""><b>鋪</b><span class="t">28:14</span><span class="x">她說不用撕、直接咬就好 → りんごっち耍帥說「不，是我會在意啦」，還是撕下來給她，回家大哭 → 福嶋：「絕對是個超級大的契機」，「判為青春，也就是有罪」</span></li><li class="fall"><b>落</b><span class="t">31:11</span><span class="x">「意思是「你做了很可惜的事呢」。」<em class="h">福嶋</em></span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag short"><strong>只有起、鋪</strong>　落是這段最後一列。<div class="alt"><div class="alt-h">要補齊的話：起訖改成 <span class="pill sm">27:41–31:25</span>（多 8 秒），補一行收</div><ol class="beats"><li class="add "><b>收</b><span class="t">31:17</span><span class="x">不過「不，是我會在意啦」好帥，「是很好、很好的青春。」</span></li></ol></div></div>
+</article></div></section>
+<section class="ep" id="ep08"><h2>第 8 回<small>來賓 根本優奈・4 段</small></h2><div class="panel"><article class="clip" id="ep08-1">
+  <div class="meta"><span class="pill">03:14–05:54</span><span>2 分 40 秒</span><span class="no">#1</span></div>
+  <h3>一整年吃素麵，配料必備蟹肉棒</h3>
+  <blockquote class="h"><p class="q">欸，蟹肉棒放什麼都很搭啊。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">03:14</span><span class="x">根本吃了今年第一次的素麵，覺得「夏天來了」；喜歡辣的，加超多山葵再加海苔</span></li><li class=""><b>鋪</b><span class="t">03:37</span><span class="x">福嶋一整年都吃：煮 2 束，沾汁冷熱各一 → 根本：「好像瑪麗・安東尼喔」→ 冷的放蟹肉棒和蔥，熱的放豬肉 → 根本：「我對素麵的概念整個崩壞了」</span></li><li class="fall"><b>落</b><span class="t">05:26</span><span class="x">「欸，蟹肉棒放什麼都很搭啊。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">05:28</span><span class="x">根本：「第一次聽說耶」→ 福嶋：從小吃素麵就有，像中華涼麵的配料，蟹肉棒「是必備的」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep08-2">
+  <div class="meta"><span class="pill">10:02–12:16</span><span>2 分 14 秒</span><span class="no">#2</span></div>
+  <h3>還不了解根本？她是大姐頭</h3>
+  <blockquote class="g"><p class="q">明白了嗎？ピンゾロさん。根本就是這樣的女人喔。</p><p class="by">—— 根本優奈</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">10:02</span><span class="x">ピンゾロさん來信：「我對根本さん還不太了解」，想請福嶋說說根本是什麼樣的人</span></li><li class=""><b>鋪</b><span class="t">10:37</span><span class="x">福嶋：「就是大姐頭的感覺」，剪了短髮更有大姐感，會帶領她 → 愛聊天、開朗、愛喝酒，「真的只有滿滿的安心感」</span></li><li class="fall"><b>落</b><span class="t">12:02</span><span class="x">「明白了嗎？ピンゾロさん。根本就是這樣的女人喔。」<em class="g">根本</em></span></li><li class=""><b>收</b><span class="t">12:11</span><span class="x">根本：「就是個……的大姐頭啦。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep08-3">
+  <div class="meta"><span class="pill">21:53–24:34</span><span>2 分 41 秒</span><span class="no">#3</span></div>
+  <h3>工作要廣播叫人，建議走超嗨路線</h3>
+  <blockquote class="h"><p class="q">就是超嗨路線。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">21:53</span><span class="x">大葉さん來信：工作上要廣播叫人，會吃螺絲、聲音傳不出去，想要建議</span></li><li class=""><b>鋪</b><span class="t">22:29</span><span class="x">福嶋：想像麥克風後面有想傳達的對象、稍微改變念法 → 根本：用很嗨的感覺說「大家有在聽嗎？」→ 福嶋：「信上寫的是工作上的叫人廣播耶」</span></li><li class="fall"><b>落</b><span class="t">24:26</span><span class="x">「就是超嗨路線。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">24:31</span><span class="x">根本：「超嗨路線。」→ 福嶋也跟著說</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep08-4">
+  <div class="meta"><span class="pill">34:31–37:40</span><span>3 分 9 秒</span><span class="no">#4</span></div>
+  <h3>正義感強的人，不喜歡哪種花色</h3>
+  <blockquote class="h"><p class="q">啊，よこしま……「よこしまな考え」（邪念）。不就是這個嗎？</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">34:31</span><span class="x">題目：正義感非常強、收集衣服的 A 同學，只有一種不喜歡的花色：直條紋、格紋、圓點、橫條紋</span></li><li class=""><b>鋪</b><span class="t">35:24</span><span class="x">根本：硬要說「答案是圓點」→ 換個說法唸：縦縞（たてじま）、交叉、ドット → 根本：「横縞（よこしま）」</span></li><li class="fall"><b>落</b><span class="t">36:35</span><span class="x">「啊，よこしま……「よこしまな考え」（邪念）。不就是這個嗎？」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">36:41</span><span class="x">福嶋：因為討厭よこしま的事，「所以是討厭橫條紋吧？」→ 根本還是說「不太會穿的圓點」→ 福嶋：「好巧妙喔」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep09"><h2>第 9 回<small>福嶋一個人・3 段</small></h2><div class="panel"><article class="clip" id="ep09-1">
+  <div class="meta"><span class="pill">07:18–09:33</span><span>2 分 15 秒</span><span class="no">#1</span></div>
+  <h3>假日怎麼喘口氣？她自己在無限循環</h3>
+  <blockquote class="h"><p class="q">「啊，日劇看完了。好，來玩《リズム天国》吧」，現在一直在這樣重複。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">07:18</span><span class="x">能喘口氣的假日過法：買了 Fire TV Stick，想從第 1 部開始重看《クレヨンしんちゃん》電影，也在重看小時候看過的日劇</span></li><li class=""><b>鋪</b><span class="t">08:47</span><span class="x">最近一直在玩《リズム天国》：「《リズム天国》玩太多了，休息一下吧。啊，來看個電影吧，看個日劇吧」</span></li><li class="fall"><b>落</b><span class="t">09:05</span><span class="x">「「啊，日劇看完了。好，來玩《リズム天国》吧」，現在一直在這樣重複。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">09:12</span><span class="x">超想玩、也超想看，「所以會想早點回家」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep09-2">
+  <div class="meta"><span class="pill">19:13–20:01</span><span>48 秒</span><span class="no">#2</span></div>
+  <h3>沒演那齣，還是被劇裡的披薩勾走</h3>
+  <blockquote class="h"><p class="q">還是說「叫披薩吧」，大家一起吃了披薩。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">19:13</span><span class="x">很溫暖的團隊，日場和夜場之間大家一起吃了午餐</span></li><li class=""><b>鋪</b><span class="t">19:23</span><span class="x">第 2 部《ボトリゲス》裡有大家一起叫披薩的場景，就突然想吃披薩了；「《ボトリゲス》我沒演」</span></li><li class="fall"><b>落</b><span class="t">19:39</span><span class="x">「還是說「叫披薩吧」，大家一起吃了披薩。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">19:43</span><span class="x">朗讀劇正式演出的日子和大家一起開披薩派對，「這種事我還是第一次」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep09-3">
+  <div class="meta"><span class="pill">27:09–30:22</span><span>3 分 13 秒</span><span class="no">#3</span></div>
+  <h3>Double Up 押 16 枚，義式吃到飽太便宜</h3>
+  <blockquote class="h"><p class="q">咦，也、也太便宜了吧。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">27:09</span><span class="x">第 2 局要押 Double Up：「這種時候當然要押啊」</span></li><li class=""><b>鋪</b><span class="t">27:32</span><span class="x">「大葉」さん的題目：義式吃到飽上位方案的午餐價（未稅），設定 2500 日圓 → 押 16 枚猜「比設定的金額高」→「ブブー」，答案 2000 日圓</span></li><li class="fall"><b>落</b><span class="t">29:34</span><span class="x">「咦，也、也太便宜了吧。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">29:45</span><span class="x">「那家店很努力了」→ 押的 16 枚變成 0，剩 82 枚</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep10"><h2>第 10 回<small>來賓 佐藤榛夏・5 段</small></h2><div class="panel"><article class="clip" id="ep10-1">
+  <div class="meta"><span class="pill">05:35–06:45</span><span>1 分 10 秒</span><span class="no">#1</span></div>
+  <h3>提前的生日禮物：彩虹色素麵</h3>
+  <blockquote class="g"><p class="q">是素麵。彩虹色的素麵。</p><p class="by">—— 佐藤榛夏</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">05:35</span><span class="x">在錄音的世界線裡還沒到：福嶋祝佐藤 8 月 13 日生日快樂；播出的 22 日已經過了</span></li><li class=""><b>鋪</b><span class="t">05:58</span><span class="x">送上生日禮物，佐藤：「好重」→ 打開唸出「初蟬呼喚夏天的早晨」，福嶋：「是聲優耶」</span></li><li class="fall"><b>落</b><span class="t">06:43</span><span class="x">「是素麵。彩虹色的素麵。」<em class="g">佐藤</em></span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag short"><strong>只有起、鋪</strong>　落是這段最後一列。<div class="alt"><div class="alt-h">要補齊的話：起訖改成 <span class="pill sm">05:35–06:50</span>（多 5 秒），補一行收</div><ol class="beats"><li class="add "><b>收</b><span class="t">06:45</span><span class="x">福嶋：看到有彩色的素麵 → 佐藤：「好厲害喔。從來沒看過這種的。」</span></li></ol></div></div>
+</article>
+<article class="clip" id="ep10-2">
+  <div class="meta"><span class="pill">15:50–18:25</span><span>2 分 35 秒</span><span class="no">#2</span></div>
+  <h3>萬能卡？當魚餌就不行</h3>
+  <blockquote class="h"><p class="q">我才不想把任何朋友當成魚餌咧。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">15:50</span><span class="x">「やさん」來信：福嶋和藤本曾稱佐藤是什麼題目都適用的萬能卡，現在會選誰？</span></li><li class=""><b>鋪</b><span class="t">16:27</span><span class="x">福嶋：「我覺得妳就是萬能卡」→ 佐藤：真的什麼都可以嗎？「釣魚時要找人代替假餌的話選誰」</span></li><li class="fall"><b>落</b><span class="t">16:38</span><span class="x">「我才不想把任何朋友當成魚餌咧。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">16:59</span><span class="x">佐藤：「完全可以拿我來用喔」→ 福嶋：有佐藤在應該就沒問題 → 兩人視力都不好，「我們瞇著眼睛前進吧」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep10-3">
+  <div class="meta"><span class="pill">21:31–23:53</span><span>2 分 22 秒</span><span class="no">#3</span></div>
+  <h3>三河腔：珍珠沉底叫とごる</h3>
+  <blockquote class="g"><p class="q">珍珠沉在下面，會說「啊，とごっとるわ」。</p><p class="by">—— 佐藤榛夏</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">21:31</span><span class="x">佐藤介紹三河腔：語尾加「じゃん」「だら」「りん」</span></li><li class=""><b>鋪</b><span class="t">21:52</span><span class="x">「どいや」是「超」的意思 → 語尾有特徵，一講敬語就幾乎不會出現 → 偶爾對方聽不懂的詞：「こきー」類似「好累」→ 還有「とごる」</span></li><li class="fall"><b>落</b><span class="t">23:28</span><span class="x">「珍珠沉在下面，會說「啊，とごっとるわ」。」<em class="g">佐藤</em></span></li><li class=""><b>收</b><span class="t">23:34</span><span class="x">福嶋：就像「沒攪勻」那樣？→ 佐藤：就是那個意思 → 福嶋：「聽到了好多我不知道的さとはる。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep10-4">
+  <div class="meta"><span class="pill">25:48–28:20</span><span>2 分 32 秒</span><span class="no">#4</span></div>
+  <h3>沒當聲優的話：律師，砰！異議あり</h3>
+  <blockquote class="h"><p class="q">就是「異議あり」。砰！「異議あり」這樣。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">25:48</span><span class="x">來信問選了聲優以外的路會怎樣：佐藤就職過，做乙女遊戲劇本大綱的見習生，沒當上聲優的話應該會一直待在那裡</span></li><li class=""><b>鋪</b><span class="t">26:40</span><span class="x">佐藤：大學是法學部的，再認真念法律的話，說不定會往律師或檢察官走 → 福嶋：「好帥」，「有沒有那、那種台詞？」</span></li><li class="fall"><b>落</b><span class="t">27:06</span><span class="x">「就是「異議あり」。砰！「異議あり」這樣。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">27:14</span><span class="x">佐藤：在法庭上那樣做「會被命令退庭的」→ 福嶋：「感覺很好找妳商量耶」→ 佐藤：法律的事「什麼都不記得了」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep10-5">
+  <div class="meta"><span class="pill">33:24–35:48</span><span>2 分 24 秒</span><span class="no">#5</span></div>
+  <h3>暗號解出來是「很煩耶」？</h3>
+  <blockquote class="h"><p class="q">咦，是說我們很煩的意思？</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">33:24</span><span class="x">題目：運用鑰匙，回答藏在暗號裡的單字；鑰匙 1 是苦無，2、3 是寫著 12 月的插圖</span></li><li class=""><b>鋪</b><span class="t">33:49</span><span class="x">暗號「くしーにくけくーし」，佐藤一下就唸出來，福嶋：「根本天才」→ くない（苦無）刪掉く，12 月換掉 → 佐藤：「しつけーし（很煩耶）」</span></li><li class="fall"><b>落</b><span class="t">34:46</span><span class="x">「咦，是說我們很煩的意思？」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">34:51</span><span class="x">佐藤：「我們明明什麼都還沒說耶」→ 福嶋：還有 1 個 12 月是しわす → 佐藤：「那就是スーツケース。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep11"><h2>第 11 回<small>福嶋一個人・3 段</small></h2><div class="panel"><article class="clip" id="ep11-1">
+  <div class="meta"><span class="pill">13:43–16:02</span><span>2 分 19 秒</span><span class="no">#1</span></div>
+  <h3>解謎雜誌解完，抽獎永遠忘記寄</h3>
+  <blockquote class="h"><p class="q">所以我從來沒中過抽獎。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">13:43</span><span class="x">很小的時候玩過，前陣子在書店隔了很久又看到解謎雜誌 →「這個我很希望大家用紙來解」</span></li><li class=""><b>鋪</b><span class="t">15:11</span><span class="x">解謎雜誌常有抽獎：總想全部解完再一起寄，「結果就會忘記抽獎的截止日期」→ 答案都圈好寫好了，「一想著要一起寄，就把一切都忘光了」</span></li><li class="fall"><b>落</b><span class="t">16:00</span><span class="x">「所以我從來沒中過抽獎。」<em class="h">福嶋</em></span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag short"><strong>只有起、鋪</strong>　落是這段最後一列。<div class="alt"><div class="alt-h">要補齊的話：起訖改成 <span class="pill sm">13:43–16:10</span>（多 8 秒），補一行收</div><ol class="beats"><li class="add "><b>收</b><span class="t">16:02</span><span class="x">「本來寄出去的數量就少，因為記得寄的也少。」</span></li></ol></div></div>
+</article>
+<article class="clip" id="ep11-2">
+  <div class="meta"><span class="pill">26:31–27:31</span><span>60 秒</span><span class="no">#2</span></div>
+  <h3>去了 16 次拉麵店，冷拉麵只有 1 次</h3>
+  <blockquote class="h"><p class="q">1、2、3……16，我吃了 16 次拉麵，</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">26:31</span><span class="x">遊戲進行中稍微看一下：「拉麵我吃超多的」</span></li><li class=""><b>鋪</b><span class="t">26:43</span><span class="x">有在記錄，從 7 月算到這次錄音，數了一遍 →「我剛剛數到多少？」</span></li><li class="fall"><b>落</b><span class="t">27:03</span><span class="x">「1、2、3……16，我吃了 16 次拉麵，」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">27:10</span><span class="x">這是去拉麵店的次數；吃了這麼多，「冷拉麵只吃了 1 次」，在家吃冷的幾乎只有素麵</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep11-3">
+  <div class="meta"><span class="pill">38:22–41:11</span><span>2 分 49 秒</span><span class="no">#3</span></div>
+  <h3>差 1 張就 10 倍，抽到「大約 20 次」</h3>
+  <blockquote class="h"><p class="q">しこさん什麼都沒做錯。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">38:22</span><span class="x">Hit 抽到「船橋の社畜」さん，1 次</span></li><li class=""><b>鋪</b><span class="t">38:59</span><span class="x">手上 6 張、16 點，抽到第 7 張就是 10 倍 →「所以抽」→「しこ」さん「大約 20 次」：夏天戶外作業多，每週大概 3 次買便利商店的中華涼麵</span></li><li class="fall"><b>落</b><span class="t">40:36</span><span class="x">「しこさん什麼都沒做錯。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">40:39</span><span class="x">很拚命在工作，「多到都數不清確切次數了嘛」→ 頭撞到麥克風 →「壓倒性的爆牌」，「福嶋陣亡了」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+<section class="ep" id="ep12"><h2>第 12 回<small>來賓 佐伯伊織・5 段</small></h2><div class="panel"><article class="clip" id="ep12-1">
+  <div class="meta"><span class="pill">01:30–02:22</span><span>52 秒</span><span class="no">#1</span></div>
+  <h3>重大情報：她每一回都在揮手</h3>
+  <blockquote class="h"><p class="q">雖然大家看不到，但我有在揮。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">01:30</span><span class="x">佐伯對聽眾說：「各位，請聽我說一下。」</span></li><li class=""><b>鋪</b><span class="t">01:42</span><span class="x">福嶋說「皆さんこんまとぺ」的時候，都在對大家揮手</span></li><li class="fall"><b>落</b><span class="t">01:52</span><span class="x">「雖然大家看不到，但我有在揮。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">02:05</span><span class="x">福嶋：12 回全都有揮，好像是種習慣 → 佐伯：「我覺得超可愛的。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep12-2">
+  <div class="meta"><span class="pill">19:12–22:09</span><span>2 分 57 秒</span><span class="no">#2</span></div>
+  <h3>問尊敬她哪裡，威嚴先崩了</h3>
+  <blockquote class="g"><p class="q">身為前輩的威嚴可能正在崩塌中。</p><p class="by">—— 佐伯伊織</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">19:12</span><span class="x">來信：想聽身為後輩的福嶋，尊敬佐伯哪些地方</span></li><li class=""><b>鋪</b><span class="t">19:21</span><span class="x">佐伯：「我很希望妳就這樣繼續不知道下去」→ 福嶋細數可愛的地方：恐怖遊戲比自己還害怕、第一印象超級能幹現在多了迷糊、聚餐縮在角落 → 佐伯：福ちゃん比我還可靠</span></li><li class="fall"><b>落</b><span class="t">21:48</span><span class="x">「身為前輩的威嚴可能正在崩塌中。」<em class="g">佐伯</em></span></li><li class=""><b>收</b><span class="t">21:52</span><span class="x">福嶋：想到那可能是佐伯的真面目，就很開心；總想著要有前輩的樣子，會有點累嘛</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep12-3">
+  <div class="meta"><span class="pill">24:21–25:24</span><span>1 分 3 秒</span><span class="no">#3</span></div>
+  <h3>隨手寫進特技欄的撈金魚</h3>
+  <blockquote class="g"><p class="q">我正在煩惱要不要刪掉。</p><p class="by">—— 佐伯伊織</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">24:21</span><span class="x">福嶋問：撈金魚也很擅長嗎？</span></li><li class=""><b>鋪</b><span class="t">24:41</span><span class="x">特技本來只有「開心地唱歌」，在祭典撈到很多，就用超輕鬆的心情加了撈金魚 → 結果在滿多節目裡一直被拿出來講</span></li><li class="fall"><b>落</b><span class="t">25:21</span><span class="x">「我正在煩惱要不要刪掉。」<em class="g">佐伯</em></span></li><li class=""><b>收</b><span class="t">25:23</span><span class="x">福嶋：「啊，欸，是喔。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article>
+<article class="clip" id="ep12-4">
+  <div class="meta"><span class="pill">40:15–41:19</span><span>1 分 4 秒</span><span class="no">#4</span></div>
+  <h3>超級能幹的兩人，解太快了</h3>
+  <blockquote class="h"><p class="q">畢竟是バリバリしごできキャリアウーマン，這種題目輕鬆搞定。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">40:15</span><span class="x">兩人一起說出答案</span></li><li class=""><b>鋪</b><span class="t">40:29</span><span class="x">答案應該是之前一起上節目時，福嶋說佐伯第一印象的那句話；記得兩人拿著板子拍了照</span></li><li class="fall"><b>落</b><span class="t">40:59</span><span class="x">「畢竟是バリバリしごできキャリアウーマン，這種題目輕鬆搞定。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">41:03</span><span class="x">佐伯：「下一題請上吧」→ 福嶋：「已經沒有了」→ 解太快了</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  <div class="flag info">v2 的鋪寫了「（第 2 段也講到）」，這次拿掉：每段要能單獨看懂。</div>
+</article>
+<article class="clip" id="ep12-5">
+  <div class="meta"><span class="pill">41:56–43:27</span><span>1 分 31 秒</span><span class="no">#5</span></div>
+  <h3>正要換檔加速，約好打電動</h3>
+  <blockquote class="h"><p class="q">光是能約好這件事，我今天就很幸福了。</p><p class="by">—— 福嶋晴菜</p></blockquote>
+  <ol class="beats"><li class=""><b>起</b><span class="t">41:56</span><span class="x">福嶋問佐伯這次覺得怎麼樣</span></li><li class=""><b>鋪</b><span class="t">41:59</span><span class="x">佐伯：緊張感終於慢慢融化，正要換檔加速 → 福嶋：「那就再來一輪吧」→ 佐伯：「地獄般的現場。」→ 福嶋：不過想一起打電動</span></li><li class="fall"><b>落</b><span class="t">43:18</span><span class="x">「光是能約好這件事，我今天就很幸福了。」<em class="h">福嶋</em></span></li><li class=""><b>收</b><span class="t">43:22</span><span class="x">佐伯：「哪裡，我才要謝謝妳。很開心。」</span></li></ol>
+  <div class="btns"><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>播放</span><span class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>查看圖卡</span></div>
+  
+</article></div></section>
+
+  <h2 class="sec">第 12 回：和 v2 不一樣的 11 行</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>位置</th><th>v2</th><th>這次</th><th>為什麼</th></tr></thead>
+    <tbody><tr><td class="nw">第 12 回 #1 鋪</td><td class="old">福嶋說「皆さんこんまとぺ」的時候都在揮手</td><td>福嶋說「皆さんこんまとぺ」的時候，都在對大家揮手</td><td class="why">補回原文的「對大家」</td></tr><tr><td class="nw">第 12 回 #1 收</td><td class="old">12 回全都有揮，是習慣；佐伯：超可愛</td><td>福嶋：12 回全都有揮，好像是種習慣 → 佐伯：「我覺得超可愛的。」</td><td class="why">原文是「好像是種習慣」，保留「好像」；佐伯那句改用原文</td></tr><tr><td class="nw">第 12 回 #2 起</td><td class="old">來信：想聽後輩福嶋尊敬佐伯哪裡</td><td>來信：想聽身為後輩的福嶋，尊敬佐伯哪些地方</td><td class="why">照信上的說法</td></tr><tr><td class="nw">第 12 回 #2 鋪</td><td class="old">佐伯：希望妳永遠不知道 → 福嶋細數她的可愛：恐怖遊戲比自己還怕、第一印象超級能幹現在多了迷糊、聚餐縮在角落 → 佐伯：福ちゃん比我還可靠</td><td>佐伯：「我很希望妳就這樣繼續不知道下去」→ 福嶋細數可愛的地方：恐怖遊戲比自己還害怕、第一印象超級能幹現在多了迷糊、聚餐縮在角落 → 佐伯：福ちゃん比我還可靠</td><td class="why">「永遠」是誇大，改用原文</td></tr><tr><td class="nw">第 12 回 #2 收</td><td class="old">福嶋：總想著要有前輩的樣子會累，看到妳的真面目很開心</td><td>福嶋：想到那可能是佐伯的真面目，就很開心；總想著要有前輩的樣子，會有點累嘛</td><td class="why">照原文順序；原文是「可能是真面目」，保留「可能」</td></tr><tr><td class="nw">第 12 回 #3 鋪</td><td class="old">特技只有「開心地唱歌」，撈到很多就隨手加上 → 結果到處被叫去撈</td><td>特技本來只有「開心地唱歌」，在祭典撈到很多，就用超輕鬆的心情加了撈金魚 → 結果在滿多節目裡一直被拿出來講</td><td class="why">原文是「用超輕鬆的心情」加上、「一直被拿出來講」，沒說到處被叫去撈</td></tr><tr><td class="nw">第 12 回 #4 起</td><td class="old">解謎的答案，兩人一起說</td><td>兩人一起說出答案</td><td class="why">字數更短</td></tr><tr><td class="nw">第 12 回 #4 鋪</td><td class="old">答案是福嶋以前形容佐伯第一印象的話（第 2 段也講到）</td><td>答案應該是之前一起上節目時，福嶋說佐伯第一印象的那句話；記得兩人拿著板子拍了照</td><td class="why">原文有「應該是」；拿掉跨段引用；補上拍照</td></tr><tr><td class="nw">第 12 回 #4 收</td><td class="old">「下一題請上吧」→「已經沒有了」→ 解太快了</td><td>佐伯：「下一題請上吧」→ 福嶋：「已經沒有了」→ 解太快了</td><td class="why">補說話者</td></tr><tr><td class="nw">第 12 回 #5 起</td><td class="old">福嶋問佐伯這次覺得怎樣</td><td>福嶋問佐伯這次覺得怎麼樣</td><td class="why">原文用字</td></tr><tr><td class="nw">第 12 回 #5 鋪</td><td class="old">[42:10] 緊張剛融化、正要換檔加速 →「地獄般的現場」→ 福嶋想一起打電動</td><td>[41:59] 佐伯：緊張感終於慢慢融化，正要換檔加速 → 福嶋：「那就再來一輪吧」→ 佐伯：「地獄般的現場。」→ 福嶋：不過想一起打電動</td><td class="why">「緊張感融化」在 41:59 那列，時間跟著改；補「那就再來一輪吧」，「地獄般的現場」才有前因</td></tr></tbody>
+  </table></div>
+
+  <h2 class="sec">點頭之後會一起做的事</h2>
+  <ul class="plan">
+    <li>起鋪收寫進 12 個集數檔，接在每段 <code>&gt;</code> 精華句下面（先備份、保留 CRLF）：</li>
+  </ul>
+  <pre>### [01:30–02:22] 重大情報：她每一回都在揮手
+&gt; 雖然大家看不到，但我有在揮。
+- 起 [01:30] 佐伯對聽眾說：「各位，請聽我說一下。」
+- 鋪 [01:42] 福嶋說「皆さんこんまとぺ」的時候，都在對大家揮手
+- 收 [02:05] 福嶋：12 回全都有揮，好像是種習慣 → 佐伯：「我覺得超可愛的。」</pre>
+  <ul class="plan">
+    <li>內容檢查改成每段都要有起鋪收（現在是有寫才檢查）。只有兩種例外：落是最後一列可以沒有收，落是第 2 列可以沒有鋪。</li>
+    <li>其他檢查照舊：起＝段頭、起＜鋪＜落＜收＜迄、時間都是逐字稿的列、「」裡的字在逐字稿找得到。</li>
+    <li><code>docs/episode-workflow.md</code> 精華片段那節補上起鋪收的寫法。</li>
+    <li>網站程式不用改：精華分頁已經會畫起鋪落收，只是集數檔還沒有資料。上線後量 1280 和 393 兩種寬度、跑對齊檢查。</li>
+  </ul>
+</main>
+</body>
+</html>
