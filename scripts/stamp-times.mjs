@@ -14,12 +14,20 @@
 // 挑哪個字：一列的整秒 t 是它第一個字開口時間捨去到整秒，所以那個字一定落在 [t, t+1) 秒的窗口內，
 // 小數 = 它的開口時間捨去到 0.1 秒（整秒部分因此永遠等於原標籤）。窗口常有好幾個字，每個字打分數，越低越好：
 //   1. 先驗：窗口內第一個句首字 0、後面的句首字 1、子句邊界 2、其他 3。句首字＝整份字幕第一個字，或上一個字
-//      以 。？！ 結尾；子句邊界＝上一個字是「、」，或離上一個字開口 ≥ 0.4 秒。
+//      以 。？！ 結尾；子句邊界＝上一個字是「、」，或離上一個字開口 ≥ 0.4 秒。（往前多看一秒的列見下）
 //   2. 長度：一列的中文字數約是它涵蓋的日文字數的 RATIO 倍（Gale–Church 長度比對）。相鄰兩列選的字決定上一列
 //      涵蓋多少日文字，對不上就扣分。
 //   3. 順序：選到不在上一列之後的字扣重分，所以時間不會倒退。
 //   整集用 Viterbi 一次找總分最低的組合，一列選哪個字也看前後列的字數。
 //   窗口裡一個字都沒有的列（標籤不是任何字的整秒）維持整秒，統計列為「留整秒」。
+//
+// 換人挪一秒的列（這段也是 jurii-showroom 沒有的）：逐字稿相鄰兩列不同秒，同一秒換人時後一列往後挪一秒，
+// 這種列的第一個字其實在前一秒。所以換了說話者、又剛好比上一列晚一秒的列，窗口從上一列的整秒開始，多看前一秒：
+//   - 前一秒只挑有口語字的字；[笑い] 這類標記和標點，逐字稿都寫在上一列。
+//   - 前一秒裡也有上一列的字，所以上一列選的字之後的第一個句首字也算 0 分，跟這一列自己那一秒的第一個句首字
+//     一樣；兩個都 0 分時由長度決定前一秒那句歸誰。
+//   - 選到前一秒的字＝開頭在前一秒，整秒不能動，寫 .0，統計列為「開頭在前一秒」。
+//   - 選到的字不在上一列選的字之後＝前一秒沒有這一列的字：這些列不往前看，重算。
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -36,7 +44,7 @@ const PRIOR = { firstSentence: 0, laterSentence: 1, clause: 2, other: 3 };
 
 // [mm:ss] 或 [hh:mm:ss]，後面可帶一位小數；和 validate-content.mjs 認的逐字稿列一致
 const ROW =
-  /^([ \t]*\[(\d{2}:\d{2}(?::\d{2})?))(?:\.(\d))?\][ \t]*\[[^\]\r\n]+\][ \t]*([^\r\n]*)/gm;
+  /^([ \t]*\[(\d{2}:\d{2}(?::\d{2})?))(?:\.(\d))?\][ \t]*\[([^\]\r\n]+)\][ \t]*([^\r\n]*)/gm;
 const TAGS = /\[[^\]]*\]|［[^］]*］/g;
 const MARKS = /[\s。，、？！「」『』（）()—…·〈〉《》,.?!:;：；"'~〜♪]/g;
 
@@ -115,12 +123,16 @@ function transition(S, pj, j, zh) {
   return length + (j <= pj ? OUT_OF_ORDER : 0);
 }
 
-// rows: [{ lo, hi, zh }]，候選字的開口時間落在 [lo, hi) ms，zh ＝ 這一列的中文口語字數。
-// 回傳每列選到的字（index），窗口裡沒有字的列是 null。
+// rows: [{ lo, hi, zh, from? }]，候選字的開口時間落在 [lo, hi) ms，有 from 就從 from 開始看（換人挪一秒的列），
+// zh ＝ 這一列的中文口語字數。回傳每列選到的字（index），窗口裡沒有字的列是 null。
 export function pickTokens(S, rows) {
-  const cand = rows.map(({ lo, hi }) => {
-    const first = lowerBound(S.T, lo);
-    return Array.from({ length: lowerBound(S.T, hi) - first }, (_, k) => first + k);
+  const cand = rows.map(({ lo, hi, from = lo }) => {
+    const first = lowerBound(S.T, from);
+    return (
+      Array.from({ length: lowerBound(S.T, hi) - first }, (_, k) => first + k)
+        // 往前多看的那一秒只挑有口語字的：[笑い] 這類標記和標點，逐字稿都寫在上一列
+        .filter((j) => S.T[j] >= lo || S.chars[j + 1] > S.chars[j])
+    );
   });
   const live = cand.flatMap((c, k) => (c.length ? [k] : []));
   const picks = rows.map(() => null);
@@ -135,17 +147,20 @@ export function pickTokens(S, rows) {
   // layers[m][a]：第 m 個有字的列選第 a 個候選時，從頭到這裡的最低總分，和它是從上一層哪個候選來的
   const layers = [];
   live.forEach((k, m) => {
-    const firstSentence = cand[k].find((j) => S.sent[j]);
+    // 「第一個句首字」有兩個：上一列選的字之後的第一個（往前多看一秒的列，它可能在前一秒），和這一列自己那一秒的
+    // 第一個。一般的列兩個是同一個字；不是同一個時兩個都 0 分，由長度決定前一秒那句是不是上一列的
+    const own = cand[k].find((j) => S.T[j] >= rows[k].lo && S.sent[j]);
+    const head = (j, pj) => Math.min(prior(S, j, cand[k].find((i) => i > pj && S.sent[i])), prior(S, j, own));
     const prev = layers[m - 1];
     layers.push(
       cand[k].map((j) => {
-        if (!prev) return { j, cost: prior(S, j, firstSentence), from: -1 };
+        if (!prev) return { j, cost: head(j, -1), from: -1 };
         let best = { cost: Infinity, from: -1 };
         prev.forEach((p, a) => {
-          const cost = p.cost + transition(S, p.j, j, zh[m - 1]);
+          const cost = p.cost + transition(S, p.j, j, zh[m - 1]) + head(j, p.j);
           if (cost < best.cost) best = { cost, from: a };
         });
-        return { j, cost: best.cost + prior(S, j, firstSentence), from: best.from };
+        return { j, cost: best.cost, from: best.from };
       }),
     );
   });
@@ -174,18 +189,36 @@ export function stamp(md, S) {
     return {
       at: from + m.index + m[1].length, // 時間碼數字後面、"]" 或既有小數前面
       tc: m[2],
+      seconds,
+      speaker: m[4],
       lo,
       hi: lo + (m[3] === undefined ? 1000 : 100), // 已經有小數的列，窗口縮成那 0.1 秒
       fixed: m[3] !== undefined,
-      zh: spoken(m[4]),
-      text: m[4],
+      zh: spoken(m[5]),
+      text: m[5],
     };
   });
   if (!rows.length) throw new Fail("逐字稿底下沒有可解析的列");
+  // 換了說話者、又剛好比上一列晚一秒：可能是同一秒換人挪過來的，開頭也往前一秒找
+  rows.forEach((row, k) => {
+    const prev = rows[k - 1];
+    if (!row.fixed && prev && row.speaker !== prev.speaker && row.seconds === prev.seconds + 1) {
+      row.from = prev.lo; // 上一列開口之前的字不可能是這一列的開頭
+    }
+  });
   const stray = (section.match(/^[ \t]*\[\d/gm) ?? []).length - rows.length;
 
-  const picks = pickTokens(S, rows);
-  const stats = { rows: rows.length, had: 0, sentence: 0, clause: 0, other: 0, whole: 0, stray };
+  let picks = pickTokens(S, rows);
+  // 往前找卻只挑到上一列自己的字（這一秒裡沒字可挑）＝沒找到：這些列不往前找，重算
+  for (;;) {
+    const forced = rows.filter(
+      (row, k) => row.from !== undefined && picks[k] !== null && picks[k - 1] !== null && picks[k] <= picks[k - 1],
+    );
+    if (!forced.length) break;
+    for (const row of forced) delete row.from;
+    picks = pickTokens(S, rows);
+  }
+  const stats = { rows: rows.length, had: 0, sentence: 0, clause: 0, other: 0, whole: 0, early: 0, stray };
   const whole = [];
   let text = "";
   let done = 0;
@@ -197,16 +230,20 @@ export function stamp(md, S) {
       stats.whole += 1;
       whole.push({ line: md.slice(0, row.at).split("\n").length, tc: row.tc, text: row.text });
     } else {
-      text += `${md.slice(done, row.at)}.${Math.floor((S.T[j] - row.lo) / 100)}`;
+      // 開頭在前一秒（換人挪過來的）：整秒不能動，定在 .0
+      const early = S.T[j] < row.lo;
+      text += `${md.slice(done, row.at)}.${early ? 0 : Math.floor((S.T[j] - row.lo) / 100)}`;
       done = row.at;
       stats[S.sent[j] ? "sentence" : S.clause[j] ? "clause" : "other"] += 1;
+      if (early) stats.early += 1;
     }
   });
   return { text: text + md.slice(done), stats, whole, rows, picks };
 }
 
 const describe = (s) =>
-  `句首 ${s.sentence}／子句或停頓 ${s.clause}／其他 ${s.other}，已有小數 ${s.had}，留整秒 ${s.whole}`;
+  `句首 ${s.sentence}／子句或停頓 ${s.clause}／其他 ${s.other}，已有小數 ${s.had}，留整秒 ${s.whole}` +
+  (s.early ? `；其中 ${s.early} 列開頭在前一秒（換人挪一秒），定在 .0` : "");
 
 function stampEpisode(ep, check) {
   const mdFile = path.join(contentDirectory, "episodes", `${ep}.md`);
@@ -264,7 +301,7 @@ function main(argv) {
         .sort()
     : names;
 
-  const total = { rows: 0, had: 0, sentence: 0, clause: 0, other: 0, whole: 0 };
+  const total = { rows: 0, had: 0, sentence: 0, clause: 0, other: 0, whole: 0, early: 0 };
   let failed = 0;
   for (const ep of episodes) {
     try {
@@ -280,8 +317,8 @@ function main(argv) {
   return failed ? 1 : 0;
 }
 
-// 小檢查：句首優先、長度把選擇拉到對的字、片語用 cue 開始時間、過場 cue 不算、小時格式、沒字的列留整秒、
-// 已有小數不動、CRLF 與段落標題原樣、重跑不變
+// 小檢查：句首優先、長度把選擇拉到對的字、片語用 cue 開始時間、過場 cue 不算、換人挪一秒的列往前找（同一人不找，
+// 前一秒的句子是上一列的就不拿）、小時格式、沒字的列留整秒、已有小數不動、CRLF 與段落標題原樣、重跑不變
 function selfTest() {
   const vtt = [
     "WEBVTT",
@@ -303,7 +340,14 @@ function selfTest() {
     "",
     "00:02:03.010 --> 00:02:05.000",
     "片語です。",
-    "次の片語",
+    "次の片語。",
+    "",
+    "00:03:00.000 --> 00:03:04.000",
+    "そうだね<00:03:00.600><c>。</c><00:03:00.800><c>うん</c><00:03:01.300><c>、</c><00:03:01.500><c>本当</c>" +
+      "<00:03:02.100><c>。</c><00:03:02.300><c>でも</c><00:03:02.600><c>ね</c><00:03:02.800><c>。</c>",
+    "",
+    "00:04:00.000 --> 00:04:03.000",
+    "そうなんだ<00:04:00.500><c>。</c><00:04:00.600><c>知らなかった</c><00:04:01.000><c>。</c><00:04:01.200><c>でしょ</c>",
     "",
     "01:00:00.200 --> 01:00:02.000",
     "ねえ<01:00:00.250><c>。</c>",
@@ -319,6 +363,11 @@ function selfTest() {
     "[01:00] [福嶋晴菜] 欸那個",
     "[02:00] [福嶋晴菜] 片語",
     "[02:03] [福嶋晴菜] 下一個片語",
+    "[03:00] [福嶋晴菜] 對啊。",
+    "[03:01] [來賓] 嗯，真的。", // 換人挪一秒：開頭うん在 03:00.8
+    "[03:02] [福嶋晴菜] 不過啊", // 也是換人晚一秒，但開頭でも就在自己這一秒
+    "[04:00] [福嶋晴菜] 這樣啊，不知道。",
+    "[04:01] [來賓] 對吧，嗯。", // 前一秒的句首字知らなかった是上一列的，長度把它留給上一列
     "[01:00:00] [福嶋晴菜] 欸",
     "[01:00:01.5] [福嶋晴菜] 已經有小數",
     "",
@@ -334,12 +383,17 @@ function selfTest() {
       .replace("[01:00] [福", "[01:00.7] [福")
       .replace("[02:00]", "[02:00.4]")
       .replace("[02:03]", "[02:03.0]")
+      .replace("[03:00]", "[03:00.0]")
+      .replace("[03:01]", "[03:01.0]")
+      .replace("[03:02]", "[03:02.3]")
+      .replace("[04:00]", "[04:00.0]")
+      .replace("[04:01]", "[04:01.2]")
       .replace("[01:00:00]", "[01:00:00.2]"),
   );
   assert.equal(text.replace(/(\[\d{2}:\d{2}(?::\d{2})?)\.\d\]/g, "$1]"), md.replace("[01:00:01.5]", "[01:00:01]"));
   assert.deepEqual(
-    [stats.sentence, stats.clause, stats.other, stats.had, stats.whole],
-    [2, 4, 0, 1, 1],
+    [stats.sentence, stats.clause, stats.other, stats.had, stats.whole, stats.early],
+    [7, 4, 0, 1, 1, 1],
   );
   assert.equal(stamp(text, S).text, text);
   console.log("自我檢查通過");
