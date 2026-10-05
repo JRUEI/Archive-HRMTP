@@ -548,20 +548,6 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
             >
               <button
                 type="button"
-                onClick={() => {
-                  setLandscape(true);
-                  setExitSide('right'); // 進去先亮 3 秒，讓人知道退出鈕在哪、之後點邊緣會再出現
-                  setHint(true);
-                }}
-                aria-label="橫向放大"
-                title="橫向放大：播放器鋪滿畫面並轉成橫的"
-                className={`${BAR_BTN} pointer-fine:hidden`}
-              >
-                <RectangleHorizontal size={16} aria-hidden="true" className="shrink-0" />
-                <span className={LABEL}>橫向放大</span>
-              </button>
-              <button
-                type="button"
                 onClick={scrollToTheaterView}
                 aria-label="畫面定位"
                 title="畫面定位：一鍵將畫面視角平滑置中對齊至播放器與字幕"
@@ -579,6 +565,21 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
               >
                 <Search size={16} aria-hidden="true" className="shrink-0" />
                 <span className={LABEL}>完整字幕</span>
+              </button>
+              {/* 只給觸控裝置：iPhone 的瀏覽器沒有元素全螢幕（工具列那顆全螢幕鈕不會出現），這顆自己鋪滿並轉橫 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setLandscape(true);
+                  setExitSide('right'); // 進去先亮 3 秒，讓人知道退出鈕在哪、之後點邊緣會再出現
+                  setHint(true);
+                }}
+                aria-label="橫向放大"
+                title="橫向放大：播放器鋪滿畫面並轉成橫的"
+                className={`${BAR_BTN} pointer-fine:hidden`}
+              >
+                <RectangleHorizontal size={16} aria-hidden="true" className="shrink-0" />
+                <span className={LABEL}>橫向放大</span>
               </button>
             </SubtitleToolbar>
             <MarkButtons tools={speakerTools} />
