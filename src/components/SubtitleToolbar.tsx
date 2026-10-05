@@ -311,7 +311,7 @@ export default function SubtitleToolbar({
               aria-label={isFullscreen ? '離開全螢幕' : '字幕全螢幕'}
               title={isFullscreen ? '離開全螢幕' : '字幕全螢幕（YouTube 內建全螢幕看不到字幕）'}
               onClick={toggleFullscreen}
-              className={BAR_BTN}
+              className={`${BAR_BTN} @max-[807px]:pointer-coarse:hidden`}
             >
               {isFullscreen ? (
                 <Minimize size={16} aria-hidden="true" className="shrink-0" />

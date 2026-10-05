@@ -41,6 +41,45 @@
   100% { transform: scale(1); }
 }
 
+/* 手機橫向放大：iPhone 的瀏覽器沒有元素全螢幕，只能自己把播放器鋪滿視窗。
+   沒套 @layer，所以壓得過播放器上的 aspect-video／圓角／邊框。
+   直拿時寬高對調再轉 90°（左上角為軸、右移一個視窗寬），橫拿時直接鋪滿；實體轉動手機時 media query 自己切換 */
+.stage-landscape {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70; /* 蓋過 Header（z-50）與逐字稿抽屜；圖卡全螢幕另有 z-[9999] */
+  width: 100dvw;
+  height: 100dvh;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+}
+@media (orientation: portrait) {
+  .stage-landscape {
+    width: 100dvh;
+    height: 100dvw;
+    transform-origin: top left;
+    transform: translateX(100dvw) rotate(90deg);
+  }
+}
+
+/* iframe 維持鋪滿舞台，黑區是 YouTube 在 iframe 裡自己留的，不要縮 iframe 也不要臨時改 viewport-fit：
+   兩者都試過，YouTube 內部算影片位置會跟實際尺寸對不上，影片整個偏一邊。
+   橫向放大時兩側的點擊感應區：寬度＝影片左右黑區（舞台寬 − 高×16/9 再除以 2）；最少 7rem，黑區很窄時仍避得開狀態列。
+   舞台直拿時寬高對調（見上面 .stage-landscape），所以 dvw／dvh 也對調 */
+.stage-landscape {
+  --bar: calc((100dvw - 100dvh * 16 / 9) / 2);
+}
+@media (orientation: portrait) {
+  .stage-landscape {
+    --bar: calc((100dvh - 100dvw * 16 / 9) / 2);
+  }
+}
+.landscape-edge {
+  width: max(7rem, var(--bar));
+}
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);

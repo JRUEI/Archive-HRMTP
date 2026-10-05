@@ -37,6 +37,13 @@ Browser pane 的截圖是全黑的，不要用。可行路徑是 headless Chrome
 CDP 的寫法照抄 `scripts/card-probe.mjs`（開分頁、等 `loadEventFired`、把函式丟進頁面執行）。
 scratchpad 的檔案不會留到下個 session（以前的範本都已不在），要留下來的腳本放 `scripts/`。
 
+手機行為（橫向放大、`pointer-coarse`、`orientation`）：Browser pane 的 `resize_window` 要用 `preset: "mobile"` 才會模擬觸控；
+自訂寬高只改尺寸，`pointer: coarse` 仍是 false，工具列會照桌機畫。直拿 375×812、橫拿 812×375 用 JS 量 `getBoundingClientRect()`；
+歷史有沒有多退，看 `navigation.currentEntry.index`，進入 +1、退出要回到原值。
+
+dev server 提供舊 CSS（`globals.css` 新增的 class 在 `/_next/static/.../*.css` 裡找不到，`touch` 檔案也沒用）時：
+停掉 server、刪 `.next/dev`、重啟。先跑 `npm run verify` 再開 dev 的順序容易踩到。
+
 量測注意：
 
 - `innerWidth / 2 = 640` 是假中線，含捲軸。1280 視窗下內容欄真正的中線是 **633**。

@@ -11,7 +11,7 @@ import {
   SUBTITLE_STORAGE_KEY,
   type SubtitleState,
 } from '@/lib/subtitle';
-import { Search, X, FileText, Crosshair, Clock } from 'lucide-react';
+import { Search, X, FileText, Crosshair, Clock, RectangleHorizontal } from 'lucide-react';
 import { useSpeakerTools, SpeakerPanel, MarkTags, MarkButtons, MarkMenu } from './SpeakerMarks';
 import SubtitleOverlay from './SubtitleOverlay';
 import SubtitleToolbar, { BAR_BTN, LABEL, SwitchTrack } from './SubtitleToolbar';
@@ -119,6 +119,49 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
   const theaterRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // 手機橫向放大：播放器鋪滿視窗（樣式在 globals.css 的 .stage-landscape）。只切 class、不動 iframe，播放不會斷
+  const [landscape, setLandscape] = useState<boolean>(false);
+  useEffect(() => {
+    if (!landscape) return;
+    document.body.style.overflow = 'hidden';
+    // 墊一筆歷史：手機的返回手勢／返回鍵（左右邊緣滑都算）會退出橫向，而不是離開整個頁面
+    window.history.pushState({ landscape: true }, '');
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLandscape(false);
+    };
+    const onPopState = () => setLandscape(false);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('popstate', onPopState);
+      // 不是被返回手勢退出的（按 X、Esc、滑動）就把墊的那筆歷史收掉，免得返回鍵要多按一次。
+      // 要等一下再看：左緣往右滑時系統的返回手勢跟自己的滑動偵測會同時觸發，立刻 back() 會連退兩步回到上一頁；
+      // 等系統那一步先退掉，墊的那筆已經不在了就不用再退
+      setTimeout(() => {
+        if (window.history.state?.landscape && !document.querySelector('.stage-landscape')) window.history.back();
+      }, 300);
+    };
+  }, [landscape]);
+
+  // 退出鈕平常藏著：點黑邊上看不見的感應區才浮出來（影片 iframe 吃掉點擊，感應區只能放在它外面的黑邊），3 秒後自己收起
+  const [exitSide, setExitSide] = useState<'left' | 'right' | null>(null);
+  const swipeFrom = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
+  // 進入橫向時的操作提示，只在剛進去那幾秒出現
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    if (!hint) return;
+    const timer = setTimeout(() => setHint(false), 4000);
+    return () => clearTimeout(timer);
+  }, [hint]);
+  useEffect(() => {
+    if (!exitSide) return;
+    const timer = setTimeout(() => setExitSide(null), 3000);
+    return () => clearTimeout(timer);
+  }, [exitSide]);
 
   // 一鍵平滑滾動畫面：底部對齊字幕群底下 10px，剛好露出上方影片時間軸
   const scrollToTheaterView = useCallback(() => {
@@ -428,7 +471,7 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
             <div
               id="transcript-player-stage"
               ref={theaterRef}
-              className="@container scroll-mt-20 relative w-full aspect-video bg-black rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl [&:fullscreen]:rounded-none [&:fullscreen]:border-0"
+              className={`@container scroll-mt-20 relative w-full aspect-video bg-black rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl [&:fullscreen]:rounded-none [&:fullscreen]:border-0 ${landscape ? 'stage-landscape' : ''}`}
             >
               <div id="transcript-yt-player" className="w-full h-full"></div>
               {subtitle.on && (
@@ -441,6 +484,59 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
                   tags={subtitle.nameTag ? subtitleTags : undefined}
                 />
               )}
+              {landscape && (
+                <>
+                  {/* 左右各一條看不見的感應區（螢幕可能轉向，缺口那側不固定）。
+                      直拿轉 90° 時這兩條落在螢幕最上、最下，最外 ~50px 是狀態列／Home 條，點了會被系統吃掉，
+                      所以寬度＝整塊黑邊（globals.css 的 .landscape-edge），最少 112px 讓有效的點擊落在 50px 之後，這樣會蓋進影片邊緣。
+                      YouTube 的標題列、進度條起點、分享鈕、全螢幕鈕都貼著影片左右邊，全高會擋住它們（進度條紅點拖不動），
+                      所以只留畫面中段 20%～60%（top-[20%] bottom-[40%]）：避得開上下兩排控制項。
+                      輕點＝浮出退出鈕，往任何方向滑 40px 以上＝直接退出（右緣往左滑沒有系統手勢可靠，只能自己偵測）；touch-none 避免被瀏覽器接走 */}
+                  {(['left', 'right'] as const).map((side) => (
+                    <button
+                      key={side}
+                      type="button"
+                      onPointerDown={(e) => (swipeFrom.current = { x: e.clientX, y: e.clientY })}
+                      onPointerUp={(e) => {
+                        const from = swipeFrom.current;
+                        swipeFrom.current = null;
+                        const moved = from ? Math.hypot(e.clientX - from.x, e.clientY - from.y) : 0;
+                        if (moved >= 40) {
+                          swiped.current = true;
+                          setLandscape(false);
+                        } else if (from) {
+                          setExitSide(side); // 輕點不等 click：iOS 對 touch-action:none 的元素補發 click 不穩
+                        }
+                      }}
+                      onClick={() => {
+                        if (swiped.current) swiped.current = false;
+                        else setExitSide(side);
+                      }}
+                      aria-label="顯示退出鈕"
+                      className={`landscape-edge absolute top-[20%] bottom-[40%] z-10 touch-none focus:outline-none ${side === 'left' ? 'left-0' : 'right-0'}`}
+                    />
+                  ))}
+                  {hint && (
+                    <p className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-4 py-1.5 text-base text-white backdrop-blur">
+                      輕點影片兩側邊緣顯示退出鈕，或於邊緣向內滑動退出
+                    </p>
+                  )}
+                  {exitSide && (
+                    <button
+                      type="button"
+                      onClick={() => setLandscape(false)}
+                      aria-label="退出橫向放大"
+                      title="退出橫向放大 (Esc)"
+                      // 以影片外緣為鏡面，把黑區的中心線映射進影片：X 中心離螢幕邊 1.5 倍黑區寬（--bar，見 globals.css），size-9 的一半是 1.125rem；
+                      // 黑區太窄或沒有時退回離邊 0.5rem
+                      style={{ [exitSide]: 'max(calc(var(--bar) * 1.5 - 1.125rem), 0.5rem)' }}
+                      className="absolute top-1/2 z-20 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+                    >
+                      <X size={18} aria-hidden="true" />
+                    </button>
+                  )}
+                </>
+              )}
             </div>
             <SubtitleToolbar
               state={subtitle}
@@ -450,6 +546,20 @@ export default function TranscriptMode({ episode, startAt }: { episode: EpisodeD
               onGroupChange={handleGroupCardChange}
               onSkip={seekBy}
             >
+              <button
+                type="button"
+                onClick={() => {
+                  setLandscape(true);
+                  setExitSide('right'); // 進去先亮 3 秒，讓人知道退出鈕在哪、之後點邊緣會再出現
+                  setHint(true);
+                }}
+                aria-label="橫向放大"
+                title="橫向放大：播放器鋪滿畫面並轉成橫的"
+                className={`${BAR_BTN} pointer-fine:hidden`}
+              >
+                <RectangleHorizontal size={16} aria-hidden="true" className="shrink-0" />
+                <span className={LABEL}>橫向放大</span>
+              </button>
               <button
                 type="button"
                 onClick={scrollToTheaterView}
